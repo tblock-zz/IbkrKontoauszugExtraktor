@@ -18,4 +18,4 @@ Voraussetzung:
 python 3.10 installiert
 
 Nach dem clonen des Repositories folgendes eingeben:
-pip install requirements.txt
+`pip install requirements.txt`
