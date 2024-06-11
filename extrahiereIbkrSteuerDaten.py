@@ -112,6 +112,7 @@ class CSVTableProcessor:
             print("\n")
     #-------------------------------------------------------------------------------------------------
     def filterTable(self, table_name, headerColumnName, search,range):
+        self.result = None
         table = self.get_table(table_name)
         if table is None:
             raise MyCustomError(f"Tabelle '{table_name}' error.")
@@ -121,6 +122,13 @@ class CSVTableProcessor:
             self.result = filtered_table
             self.name = table_name
         return self.result
+    #-------------------------------------------------------------------------------------------------
+    def getNameResult(self):
+        return [self.name, self.result]
+    #-------------------------------------------------------------------------------------------------
+    def delCols(self,cols):
+        for col in cols:
+            del self.result[col]
     #-------------------------------------------------------------------------------------------------
     def displayLastExecutionResult(self):
         try:
@@ -142,23 +150,39 @@ def showSpecificTable(obj, tableName:str,columns):
     else:
         print(f"Tabelle '{tableName}' nicht gefunden.")
 #--------------------------------------------------------------------------------------------------------------------
+def showTableColumn(prefix,table, frm, to):
+    print(prefix,end=":")
+    for i in range(frm,to):
+        print(table.iloc[i],end=",")
+    print()
+#--------------------------------------------------------------------------------------------------------------------
 def showTaxRelevantTables(obj):
     executedShorts = obj.extractExecutedShorts()
     #print("Executed Shorts\n", executedShorts.to_string(na_rep='-'))
     print("\nAusgeführte Calls\n", obj.getExecutedCalls().to_string(na_rep='-'))
     print("\nAusgeführte Puts\n" , obj.getExecutedPuts().to_string(na_rep='-'))
     print()
+
     table_name = 'Übersicht  zur realisierten und unrealisierten Performance'
-    obj.filterTable(table_name,'Vermögenswertkategorie','Gesamt*',7)
+    obj.filterTable(table_name,'Vermögenswertkategorie','Gesamt',7)
+    obj.delCols(['Symbol', 'Kostenanp.'])
+    # rename
+    r = obj.getNameResult()[1]['Vermögenswertkategorie']
+    for i, item in enumerate(['Gesamt Aktien','Gesamt Optionen','Gesamt Devisen']):
+        r.iat[i] = item
     obj.displayLastExecutionResult()
     print("\n")
+
     obj.filterTable('Zinsen','Währung','Gesamt*',4)
+    obj.delCols(['Datum', 'Beschreibung'])
     obj.displayLastExecutionResult()
     print("\n")
     obj.filterTable('Quellensteuer','Währung','Gesamt*',5)
+    obj.delCols(['Datum', 'Beschreibung', 'Code'])
     obj.displayLastExecutionResult()
     print("\n")
     obj.filterTable('Dividenden','Währung','Gesamt*',5)
+    obj.delCols(['Datum', 'Beschreibung', 'Code'])
     obj.displayLastExecutionResult()
 #--------------------------------------------------------------------------------------------------------------------
 def parseArguments():
