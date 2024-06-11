@@ -1,8 +1,3 @@
-'''
-Du bit ein python und pandas Experte und kennst dich außerdem mit IBKR aus.
-Ich habe ein Modul, dass aus einer CSV Datei von IBKR die Steuertabellen in ein pandas dataframe überführt.
-
-''' 
 import pandas as pd
 import argparse
 import csv
@@ -27,15 +22,11 @@ def alignSeparators(file_path, output_file, encoding):
     with open(file_path, 'r', encoding=encoding) as file:
         lines = file.readlines()
 
-    # BOM entfernen (falls vorhanden)
-    #if lines[0].startswith('\ufeff'):  lines[0] = lines[0][1:]
-
     max_separators = max(count_delimiters(line) for line in lines)
     # Jede Zeile auf die maximale Anzahl an Separatoren auffüllen
     aligned_lines = []
     for line in lines:
         current_separators = count_delimiters(line)
-        # Füge die fehlenden Separatoren hinzu
         aligned_lines.append(line.strip() + ',' * (max_separators - current_separators) + '\n')
     with open(output_file, 'w', encoding='utf-8') as file:
         file.writelines(aligned_lines)
@@ -44,7 +35,6 @@ def alignSeparators(file_path, output_file, encoding):
 class MyCustomError(Exception):
     pass
 #--------------------------------------------------------------------------------------------------------------------
-# wahrungsrecher.org/historisch/us-dollar/europa/april-2023
 class CSVTableProcessor:
     def __init__(self, file_path, delimiter, decimal, encoding):
         self.file_path = file_path
@@ -59,7 +49,6 @@ class CSVTableProcessor:
             print(f"Error reading CSV file: {e}")
             self.data = None
             exit()
-        #self.data = self.data.applymap (lambda x: str(x).replace(',', '.') if isinstance(x, str) else x)
         self.tables = self._split_into_tables()
     #-------------------------------------------------------------------------------------------------
     def _split_into_tables(self):
@@ -81,7 +70,6 @@ class CSVTableProcessor:
             elif row_type == 'Data':
                 current_table_data.append(row[2:].tolist())
             #print(f"Processing row {index}: table_name={table_name}, row_type={row_type}")
-
         # Speichern der letzten Tabelle
         if current_table_name is not None and current_table_data:
             tables[current_table_name] = pd.DataFrame(current_table_data[1:], columns=current_table_data[0])
@@ -141,72 +129,71 @@ class CSVTableProcessor:
         except MyCustomError as e:
             print(f"Caught a custom exception: {e}")
 #--------------------------------------------------------------------------------------------------------------------
+def showSpecificTable(obj, tableName:str,columns):
+    table = obj.get_table(tableName)
+    if table is not None:
+        if columns:
+            col_range = columns.split('-')
+            start_col = int(col_range[0])
+            end_col = int(col_range[1]) + 1
+            table = table.iloc[:, start_col:end_col]
+        print(f"Tabelle: {tableName}")
+        print(table.to_string())
+    else:
+        print(f"Tabelle '{tableName}' nicht gefunden.")
+#--------------------------------------------------------------------------------------------------------------------
+def showTaxRelevantTables(obj):
+    executedShorts = obj.extractExecutedShorts()
+    #print("Executed Shorts\n", executedShorts.to_string(na_rep='-'))
+    print("\nAusgeführte Calls\n", obj.getExecutedCalls().to_string(na_rep='-'))
+    print("\nAusgeführte Puts\n" , obj.getExecutedPuts().to_string(na_rep='-'))
+    print()
+    table_name = 'Übersicht  zur realisierten und unrealisierten Performance'
+    obj.filterTable(table_name,'Vermögenswertkategorie','Gesamt*',7)
+    obj.displayLastExecutionResult()
+    print("\n")
+    obj.filterTable('Zinsen','Währung','Gesamt*',4)
+    obj.displayLastExecutionResult()
+    print("\n")
+    obj.filterTable('Quellensteuer','Währung','Gesamt*',5)
+    obj.displayLastExecutionResult()
+    print("\n")
+    obj.filterTable('Dividenden','Währung','Gesamt*',5)
+    obj.displayLastExecutionResult()
+#--------------------------------------------------------------------------------------------------------------------
+def parseArguments():
+    parser = argparse.ArgumentParser(description='Lade eine IBKR/CAPTRADER CSV Datei und erstelle Daraus separate Tabellen.')
+    parser.add_argument('file_path', type=str, help='Dateiname mit Pfadangabe')
+    parser.add_argument('--delimiter', type=str, default=',', help='Trennzeichen für Spalten in der CSV Datei')
+    parser.add_argument('--decimal', type=str, default='.', help='Dezimalpunkt Zeichen für Nummern in der CSV Datei')
+    parser.add_argument('--encoding', type=str, default='UTF-8-SIG', help='Zeichensatz der CSV Datei')
+    parser.add_argument('--table', type=str, help='Tabellenname zum Anzeigen')
+    parser.add_argument('--columns', type=str, help='Spalten zum Anzeigen (z.B., "0-5")')
+    parser.add_argument('--tax', action='store_true', help='Tax output')
+    parser.add_argument('--list', action='store_true', help='Ausgabe verfügbarer Tabellen')
+    parser.add_argument('--align', type=str, help='Align csv separators')
+    return parser.parse_args()
+#--------------------------------------------------------------------------------------------------------------------
 def main():
-    if 0:
-        processor = CSVTableProcessor("./mytest.csv", delimiter=",", decimal=".", encoding='utf-8')
-        executedShorts = processor.extractExecutedShorts()
-    else:    
-        parser = argparse.ArgumentParser(description='Process a CSV file and split it into separate tables.')
-        parser.add_argument('file_path', type=str, default='./mytest.csv', help='Path to the CSV file')
-        parser.add_argument('--delimiter', type=str, default=',', help='Delimiter used in the CSV file')
-        parser.add_argument('--decimal', type=str, default='.', help='Decimal point character used in the CSV file')
-        parser.add_argument('--encoding', type=str, default='UTF-8-SIG', help='Encoding of the CSV file')
-        parser.add_argument('--table', type=str, help='Name of the table to display')
-        parser.add_argument('--columns', type=str, help='Range of columns to display (e.g., "0-5")')
-        parser.add_argument('--tax', action='store_true', help='Tax output')
-        parser.add_argument('--list', action='store_true', help='List of available tables')
-        parser.add_argument('--align', type=str, help='Align csv separators')
-        args = parser.parse_args()
+    args = parseArguments()
+    filename = args.file_path
 
-        filename = args.file_path
+    if args.encoding != "UTF-8-SIG":    
+        args.encoding = getEncoding(filename)
+    if args.align:
+        alignSeparators(args.file_path, args.align, args.encoding)
+        filename = args.align
 
-        if args.encoding != "UTF-8-SIG":    args.encoding = getEncoding(filename)
-        if args.align:
-            alignSeparators(args.file_path, args.align, args.encoding)
-            filename = args.align
+    processor = CSVTableProcessor(filename, delimiter=args.delimiter, decimal=args.decimal, encoding=args.encoding)
+    if args.list:
+        availableTables = list(processor.tables.keys())
+        print("Verfügbare Tabellen:", availableTables)
 
-        processor = CSVTableProcessor(filename, delimiter=args.delimiter, decimal=args.decimal, encoding=args.encoding)
-        if args.list:
-            # Überprüfen der verfügbaren Tabellen
-            available_tables = list(processor.tables.keys())
-            print("Verfügbare Tabellen:", available_tables)
-    
+    if args.tax:
+        showTaxRelevantTables(processor)
 
-        if args.tax:            
-            executedShorts = processor.extractExecutedShorts()
-            #print("Executed Shorts\n", executedShorts.to_string(na_rep='-'))
-            print("\nExecuted Calls\n", processor.getExecutedCalls().to_string(na_rep='-'))
-            print("\nExecuted Puts\n" , processor.getExecutedPuts().to_string(na_rep='-'))
-            
-            table_name = 'Übersicht  zur realisierten und unrealisierten Performance'
-            processor.filterTable(table_name,'Vermögenswertkategorie','Gesamt*',7)
-            processor.displayLastExecutionResult()
-            print("\n")
-            processor.filterTable('Zinsen','Währung','Gesamt*',4)
-            processor.displayLastExecutionResult()
-            print("\n")
-            processor.filterTable('Quellensteuer','Währung','Gesamt*',5)
-            processor.displayLastExecutionResult()
-            print("\n")
-            processor.filterTable('Dividenden','Währung','Gesamt*',5)
-            processor.displayLastExecutionResult()
-
-        # Zugriff auf eine spezifische Tabelle
-        if args.table:
-            table_name = args.table
-            table = processor.get_table(table_name)
-            if table is not None:
-                if args.columns:
-                    col_range = args.columns.split('-')
-                    start_col = int(col_range[0])
-                    end_col = int(col_range[1]) + 1
-                    table = table.iloc[:, start_col:end_col]
-                print(f"Tabelle: {table_name}")
-                print(table.to_string())
-            else:
-                print(f"Tabelle '{table_name}' nicht gefunden.")
+    if args.table:
+        showSpecificTable(processor,args.table,args.columns)
 #--------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__":
     main()
-    #data = pd.read_csv( "./mytest.csv", delimiter=",", decimal=".", encoding='latin1', header=None, quotechar='"')
-    #print (data)
