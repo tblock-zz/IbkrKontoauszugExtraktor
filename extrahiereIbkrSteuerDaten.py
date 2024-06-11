@@ -107,14 +107,14 @@ class CSVTableProcessor:
     def display_tables(self):
         """Zeigt alle Tabellen an."""
         for name, table in self.tables.items():
-            print(f"Table: {name}")
+            print(f"Tabelle: {name}")
             print(table)
             print("\n")
     #-------------------------------------------------------------------------------------------------
     def filterTable(self, table_name, headerColumnName, search,range):
         table = self.get_table(table_name)
         if table is None:
-            raise MyCustomError(f"Table '{table_name}' error.")
+            raise MyCustomError(f"Tabelle '{table_name}' error.")
         else:
             filtered_table = table[table[headerColumnName].str.contains(search, na=False)]
             filtered_table = filtered_table.iloc[:, 0:range]
@@ -124,7 +124,7 @@ class CSVTableProcessor:
     #-------------------------------------------------------------------------------------------------
     def displayLastExecutionResult(self):
         try:
-            print(f"Table: {self.name}")
+            print(f"Tabelle: {self.name}")
             print(self.result.to_string(na_rep='-'))  # Gibt die gefilterte Tabelle aus, ohne Kürzungen
         except MyCustomError as e:
             print(f"Caught a custom exception: {e}")
