@@ -3,8 +3,8 @@
 Dieses Programm und dessen Ergebnisse sind nicht geprüft und somit gibt es hier keine Garantie, das die Ausgabe korrekt ist.
 Die Ausgabe muss deshalb unbedingt noch überprüft werden. Notfalls wenden sie sich an ihren Steuerberater.
 
-Ibkr Kontoauszug Csv Extraktor  
-Dieses Python Skript ermöglicht es einfach die einzelnen Tabellen aus dem Auszug von IBKR zu extrahieren.
+Captrader/Ibkr Kontoauszug Csv Extraktor  
+Dieses Python Skript ermöglicht es einfach die einzelnen Tabellen aus dem Auszug von Captrader/IBKR zu extrahieren.
 
 Einfach aufrufen mit  
 `python extrahiereIbkrSteuerDaten.py Dateiname_mit_Pfadname_der_csv_Kontoauszugsdatei  --align converted --tax`
