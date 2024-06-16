@@ -28,8 +28,4 @@ Nach dem clonen des Repositories folgendes eingeben:
 `pip install requirements.txt`
 
 Open todo's:  
-Call Kauf   
-Put Kauf  
-Aktien Kauf  
-Aktien Verkauf  
 Umrechnen in Euro
