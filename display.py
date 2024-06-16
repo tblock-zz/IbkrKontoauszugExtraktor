@@ -49,11 +49,14 @@ def showTableColumn(prefix,table, frm, to):
 #--------------------------------------------------------------------------------------------------------------------
 def showStartStocks(t):
     showLine()
-    print("Bestehende Aktien:\n", t)
+    print("Aktien Beginn:\n", t)
 #--------------------------------------------------------------------------------------------------------------------
-def showExecutedShorts(t):
+def showExecutedShorts(t,sum=None):
     showLine()
     print("Executed Shorts\n", t.to_string(na_rep='-'))
+    if not sum is None:
+        showLine()
+        print(sum.to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showExecutedPuts(t):
     showLine()
@@ -81,7 +84,7 @@ def showSoldStocks(t):
 #--------------------------------------------------------------------------------------------------
 def showRemainingStocks(p):
     if globals.debug: print("Übrig gebliebene puts:\n", p.to_string(na_rep='-'))
-    print("\nBestehende Aktien aus puts vs calls:\n", p[p["Menge"]>0].to_string(na_rep='-'))
+    print("\nAktienbestand Ende:\n", p[p["Menge"]>0].to_string(na_rep='-'))
     print("-"*100)
 #--------------------------------------------------------------------------------------------------
 def showPerformance(table,name):

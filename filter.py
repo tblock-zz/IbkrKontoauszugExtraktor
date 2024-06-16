@@ -2,8 +2,12 @@
 Filters the tables for specific information and returns the filterend table.
 '''
 import pandas as pd
+import language as lg
 
 global tables
+global sp
+
+lng = lg.selected
 
 def setTables(_tables):
     global tables
@@ -12,8 +16,8 @@ def setTables(_tables):
 def mergePutsAndStocks(frm,to):
     return pd.concat([to.copy(), frm], ignore_index=True)    
 #--------------------------------------------------------------------------------------------------------------------
-def getRowsOfColumnsContainingStr(table, col:str, str:str):
-        return table[table[col].str.contains(str, na=False)]
+def getRowsOfColumnsContainingStr(table, colName:str, pattern:str):
+        return table[table[colName].str.contains(pattern, na=False)]
 #--------------------------------------------------------------------------------------------------------------------
 def fTable(table, headerColumnName, search, range):
     result = None
@@ -30,88 +34,123 @@ def delCols(table,cols):
         del table[col]
     return table    
 #--------------------------------------------------------------------------------------------------------------------
-def tableZinsen(tables):
-    name = 'Zinsen'
-    r = fTable(tables.get(name),'Währung','Gesamt*',4)
-    delCols(r, ['Datum', 'Beschreibung'])
+def handleTable(tables, accessName, colsToShow):
+    acc     = lng[accessName]
+    name, u = acc['name'], acc['usedCols']
+    r       = fTable(tables.get(name),u[0],u[1],colsToShow)
+    delCols(r,acc['delCols'])
     return r, name
+#--------------------------------------------------------------------------------------------------------------------
+def tableZinsen(tables):
+    return handleTable(tables, 'Zinsen', 4)
 #--------------------------------------------------------------------------------------------------------------------
 def tableDividenden(tables):
-    name = 'Dividenden'
-    r = fTable(tables.get(name),'Währung','Gesamt*',5)
-    delCols(r, ['Datum', 'Beschreibung', 'Code'])
-    return r, name
+    return handleTable(tables, 'Dividenden', 5)
 #--------------------------------------------------------------------------------------------------------------------
 def tableQuellensteuer(tables):
-    name = 'Quellensteuer'
-    r = fTable(tables.get(name),'Währung','Gesamt*',5)
-    delCols(r, ['Datum', 'Beschreibung', 'Code'])
-    return r, name
+    return handleTable(tables, 'Quellensteuer', 5)
 #--------------------------------------------------------------------------------------------------------------------
 def tableStocksStart(tables): 
-    t = tables.get('Mark-to-Market-Performance-Überblick')
-    t = getRowsOfColumnsContainingStr(t, "Vermögenswertkategorie", "Aktien")
-    colCount = "Menge"
-    t = t.rename(columns={'Vorher Menge': colCount})
-    t = t[["Symbol",colCount]]
-    t[colCount] = t[colCount].astype(int)
-    t = t[t[colCount] > 0]
-    t.rename(columns={'Vorher Menge': colCount}, inplace=True)
-    t.rename(columns={'Symbol': 'Ticker'}, inplace=True)
+    acc     = lng['Performance']
+    name, f, r = acc['name'], acc['filters'], acc['renames']
+
+    t = getRowsOfColumnsContainingStr(tables.get(name), f[0], f[1]).copy()
+    t.rename(columns={r[0]: r[1]}, inplace=True)
+    t.rename(columns={r[2]: r[3]}, inplace=True)
+    # filter nach ticker und menge
+    t = t[[r[3],r[1]]]
+    # wandle mengen string nach zahl
+    t[r[1]] = t[r[1]].astype(int)
+    # filtere 0 mengen raus
+    t = t[t[r[1]] > 0]
     return t
 #--------------------------------------------------------------------------------------------------------------------
 def tableRemainingExecutedPuts(p):    
-    p.drop('Bis', axis=1, inplace=True)
+    p.drop(lng['Transaktionen']['bis'], axis=1, inplace=True)
     return p
 #--------------------------------------------------------------------------------------------------------------------
 def tablePerformance(tables):    
-    table_name = 'Übersicht  zur realisierten und unrealisierten Performance'
-    subCol     = 'Vermögenswertkategorie'
-    t = fTable(tables.get(table_name),subCol,'Gesamt',7)
-    delCols(t, ['Symbol', 'Kostenanp.'])
-    t = t[t[subCol] != 'Gesamt (Alle Vermögenswerte)']
+    acc   = lng['Realisiert']
+    subCol= acc['usedCols'][0]
+    rslt = handleTable(tables, 'Realisiert', 7)
+    t,name = rslt[0], rslt[1]
+    t = t[t[subCol] != acc['filters'][0]].copy()
     # rename
     c = t[subCol]
-    for i, item in enumerate(['Gesamt Aktien','Gesamt Optionen','Gesamt Devisen']):
+    for i, item in enumerate(acc['renames']):
         c.iat[i] = item
-    return t,table_name
+    return t,name
 #--------------------------------------------------------------------------------------------------------------------
 def transactionsOptions(tables):
-    return tables.get('Transaktionen Aktien- und Indexoptionen')
+    return tables.get(lng['Transaktionen']['name'])
 #--------------------------------------------------------------------------------------------------------------------
 def soldOptions(tables):
     t = transactionsOptions(tables)
-    t = getRowsOfColumnsContainingStr(transactionsOptions(tables), "Code", "O")
-    return t
+    acc = lng['Transaktionen']
+    f = acc['filterSoldOptions']
+    t = getRowsOfColumnsContainingStr(t, f[0], f[1]).copy()
+    cols = lng['Transaktionen']['filters2']
+    for i in cols:
+        t[i] = pd.to_numeric(t[i])
+    e = acc['erlös']
+    t[e] = t[e].astype(float)
+    return t[t[e] > 0]
+#--------------------------------------------------------------------------------------------------------------------
+def boughtOptions(tables):
+    t = transactionsOptions(tables)
+    acc = lng['Transaktionen']
+    f = acc['filterSoldOptions']
+    t = getRowsOfColumnsContainingStr(t, f[0], f[1]).copy()
+    cols = lng['Transaktionen']['filters2']
+    for i in cols:
+        t[i] = pd.to_numeric(t[i])
+    e = acc['erlös']
+    t[e] = t[e].astype(float)
+    return t[t[e] < 0]
 #--------------------------------------------------------------------------------------------------------------------
 def soldCallsPuts(tables):
     t = soldOptions(tables)
-    df = getRowsOfColumnsContainingStr(soldOptions(tables), "Symbol", ".*?[CP]$")
-    return df[['Symbol', 'Datum/Zeit', 'Menge', 'Erlös', 'Prov./Gebühr', 'Code']]
+    acc = lng['Transaktionen']
+    f = acc['filterCallsPuts']
+    df = getRowsOfColumnsContainingStr(t, f[0], f[1])
+    return df[acc['filters']]
 #--------------------------------------------------------------------------------------------------------------------
-def soldOptionsValues(tableSoldCallsPuts):
-    cols1 = ["Erlös","Prov./Gebühr"]
-    for i in cols1:
-        tableSoldCallsPuts[i] = pd.to_numeric(tableSoldCallsPuts[i])
-    return tableSoldCallsPuts[cols1].sum()
+def boughtCallsPuts(tables):
+    t = boughtOptions(tables)
+    acc = lng['Transaktionen']
+    f = acc['filterCallsPuts']
+    df = getRowsOfColumnsContainingStr(t, f[0], f[1])
+    return df[acc['filters']]
+#--------------------------------------------------------------------------------------------------------------------
+def getOptionValues(tableSoldCallsPuts):
+    cols = lng['Transaktionen']['filters2']
+    return tableSoldCallsPuts[cols].sum()
 #--------------------------------------------------------------------------------------------------------------------
 def splitSymbolExecutedShorts(table):
-    split_columns = table['Symbol'].str.split(' ', expand=True)
-    split_columns.columns = ['Ticker', 'Bis', 'Preis', 'Typ']
-    table = table.drop(columns=['Symbol']).join(split_columns)
+    acc = lng['Transaktionen']
+    symbol = acc['symbol']
+    split_columns = table[symbol].str.split(' ', expand=True)
+    split_columns.columns = acc['splits']
+    table = table.drop(columns=[symbol]).join(split_columns)
     table = table.drop_duplicates(keep=False)
-    return table[["Datum/Zeit", 'Ticker', 'Bis', 'Preis', 'Menge']]   
+    return table[acc['filterExecutedShorts']]   
 #--------------------------------------------------------------------------------------------------------------------
 def executedOptions(tables):    
-    return getRowsOfColumnsContainingStr(transactionsOptions(tables), "Code", "A.*")
+    acc = lng['Transaktionen']
+    f   = acc['filterExeOptions']
+    return getRowsOfColumnsContainingStr(transactionsOptions(tables), f[0], f[1])
 #--------------------------------------------------------------------------------------------------------------------
 def executedCalls(executedOptionsTable):
-    calls = getRowsOfColumnsContainingStr(executedOptionsTable, "Symbol", ".*?C$")
+    acc = lng['Transaktionen']
+    f   = acc['filterExeCalls']    
+    calls = getRowsOfColumnsContainingStr(executedOptionsTable, f[0], f[1])
     calls = splitSymbolExecutedShorts(calls)
-    return calls[["Datum/Zeit", 'Ticker', 'Bis', 'Preis', 'Menge',]]   
+    return calls[acc['filterExecutedShorts']]
 #--------------------------------------------------------------------------------------------------------------------
 def executedPuts(executedOptionsTable):
-    puts = getRowsOfColumnsContainingStr(executedOptionsTable, "Symbol", ".*?P$")
+    acc = lng['Transaktionen']
+    f   = acc['filterExePuts']    
+    puts = getRowsOfColumnsContainingStr(executedOptionsTable,  f[0], f[1])
     puts = splitSymbolExecutedShorts(puts)
-    return puts[["Datum/Zeit", 'Ticker', 'Bis', 'Preis', 'Menge',]]   
+    return puts[acc['filterExecutedShorts']]
 #--------------------------------------------------------------------------------------------------------------------

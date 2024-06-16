@@ -70,8 +70,11 @@ def subtractExecutedCallsFromPuts(puts_df, calls_df):
 #--------------------------------------------------------------------------------------------------------------------
 def getExecutedShorts(tables):
     t=filter.soldCallsPuts(tables)
-    r=filter.soldOptionsValues(t)
-    print(t.to_string(), "\n", r.to_string())
+    r=filter.getOptionValues(t)
+    dp.showExecutedShorts(t,r)
+    t=filter.boughtCallsPuts(tables)
+    r=filter.getOptionValues(t)
+    dp.showExecutedShorts(t,r)
     executedShorts = filter.executedOptions(tables)
     p = filter.executedPuts(executedShorts)
     c = filter.executedCalls(executedShorts)
