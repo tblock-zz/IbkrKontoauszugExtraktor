@@ -19,6 +19,14 @@ tableNames = {
             'gewinn'              : 'Gewinn',
             'verlust'             : 'Verlust',
         } ,
+        "Aktien" : {            
+            'name'    : 'Transaktionen Aktien', 
+            'filters'      : ['Datum/Zeit', 'Symbol', 'T.-Kurs', 'Menge'], #, 'Prov./Gebühr'],
+            'filterSold'   : ["Code", "^C;Ex$"],
+            'filterBuy'    : ["Code", "^O$"],
+            'renames'      : ['T.-Kurs', 'Preis', 'Symbol', 'Ticker'],
+            'toNumber'     : ['Preis', 'Menge'],
+        },
         'Zinsen' : {
             'name'    : 'Zinsen',
             'usedCols': ['Währung','Gesamt*'],

@@ -8,16 +8,22 @@ global tables
 global sp
 
 lng = lg.selected
-
+#--------------------------------------------------------------------------------------------------------------------
 def setTables(_tables):
     global tables
     tables = _tables
 #--------------------------------------------------------------------------------------------------------------------
-def mergePutsAndStocks(frm,to):
+def merge(frm,to):
     return pd.concat([to.copy(), frm], ignore_index=True)    
 #--------------------------------------------------------------------------------------------------------------------
 def getRowsOfColumnsContainingStr(table, colName:str, pattern:str):
         return table[table[colName].str.contains(pattern, na=False)]
+#--------------------------------------------------------------------------------------------------------------------
+def delCols(table,cols):
+    for col in cols:
+        del table[col]
+    return table    
+#--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
 def fTable(table, headerColumnName, search, range):
     result = None
@@ -29,17 +35,13 @@ def fTable(table, headerColumnName, search, range):
         result = filtered_table
     return result
 #--------------------------------------------------------------------------------------------------------------------
-def delCols(table,cols):
-    for col in cols:
-        del table[col]
-    return table    
-#--------------------------------------------------------------------------------------------------------------------
 def handleTable(tables, accessName, colsToShow):
     acc     = lng[accessName]
     name, u = acc['name'], acc['usedCols']
     r       = fTable(tables.get(name),u[0],u[1],colsToShow)
     delCols(r,acc['delCols'])
     return r, name
+#--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
 def tableZinsen(tables):
     return handleTable(tables, 'Zinsen', 4)
@@ -64,6 +66,35 @@ def tableStocksStart(tables):
     # filtere 0 mengen raus
     t = t[t[r[1]] > 0]
     return t
+#--------------------------------------------------------------------------------------------------------------------
+def tableStocksBuy(tables):
+    acc = lng['Aktien']
+    t = tables.get(acc['name'])
+    f = acc['filterBuy']
+    t = getRowsOfColumnsContainingStr(t, f[0], f[1]).copy()
+    t = t[acc['filters']]
+    r = acc['renames']
+    for i in range(0,len(r),2):
+        t.rename(columns={r[i]: r[i+1]}, inplace=True)
+    r = acc['toNumber']
+    for i in range(len(r)):        
+        t[r[i]] = t[r[i]].astype(float)
+    return t
+#--------------------------------------------------------------------------------------------------------------------
+def tableStocksSell(tables):
+    acc = lng['Aktien']
+    t = tables.get(acc['name'])
+    f = acc['filterSold']
+    t = getRowsOfColumnsContainingStr(t, f[0], f[1]).copy()
+    t = t[acc['filters']]
+    r = acc['renames']
+    for i in range(0,len(r),2):
+        t.rename(columns={r[i]: r[i+1]}, inplace=True)
+    r = acc['toNumber']
+    for i in range(len(r)):        
+        t[r[i]] = t[r[i]].astype(float)
+    return t
+#--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
 def tableRemainingExecutedPuts(p):    
     p.drop(lng['Transaktionen']['bis'], axis=1, inplace=True)

@@ -77,10 +77,12 @@ def showPutsVsCalls(t):
         showLine()
 #--------------------------------------------------------------------------------------------------
 def showBoughtStocks(t):
-    pass
+    showLine()
+    print("Aktien gekauft:\n", t)
 #--------------------------------------------------------------------------------------------------
 def showSoldStocks(t):
-    pass
+    showLine()
+    print("Aktien verkauft:\n", t)
 #--------------------------------------------------------------------------------------------------
 def showRemainingStocks(p):
     if globals.debug: print("Übrig gebliebene puts:\n", p.to_string(na_rep='-'))

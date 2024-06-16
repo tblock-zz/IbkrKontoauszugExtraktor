@@ -97,10 +97,19 @@ def showCorrectedCalculation(tables):
     executedShorts,p,c = getExecutedShorts(tables)
     if globals.debug: dp.showExecutedShorts(executedShorts)
     dp.showStartStocks(stocksStart)
+    stocksBuy = filter.tableStocksBuy(tables)
+    dp.showBoughtStocks(stocksBuy)
+    stocksSold = filter.tableStocksSell(tables)
+    dp.showSoldStocks(stocksSold)
+    stocksSold ["Menge"] /= -100
+    stocksBuy  ["Menge"] /= 100
     stocksStart["Menge"] /= 100
     dp.showExecutedPuts(p)
     dp.showExecutedCalls(c)
-    p = filter.mergePutsAndStocks(stocksStart,p)
+    p = filter.merge(stocksStart,p)
+    p = filter.merge(stocksBuy,p)
+    c = filter.merge(stocksSold,c)
+    print("\n","!"*80,"\ntodo rechne Provision bei positiven Verkauf vom Aktienverkauf gewinn noch ab\n","!"*80)
     putsMinusCalls = subtractExecutedCallsFromPuts(p, c)
     dp.showPutsVsCalls(putsMinusCalls)
     filter.tableRemainingExecutedPuts(p)
