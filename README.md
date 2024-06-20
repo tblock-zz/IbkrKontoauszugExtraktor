@@ -16,7 +16,7 @@ Am Ende wird die Datei `stocksafter.csv` geschrieben, von Aktien, die am Ende na
 
 Wenn alle Daten in `Dateiname` aktuell sind, so würde man als für einen Jahresabschluß 2023 die Datei `stocksafter.csv` für das nächste Jahr z.B. nach `stocksbefore2024.csv` kopieren.
 
-##Beispiel neues Konto ab 2023 bei Captrader
+## Beispiel neues Konto ab 2023 bei Captrader
 Captrader Auszug von 2023: Captrader2023.csv vom eigenen Konto heruntergeladen   
 
 Nutze die Datei stocksbefore.csv und nenne sie um nach stocksbefore2023.csv 
