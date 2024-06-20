@@ -1,31 +1,73 @@
 tableNames = {
 'ger' : {
+        "idSoldOptions" : "Verkaufte Optionen",
+        "idSoldOptionsSum" : "Summe Einnahmen Optionen:",
+        "idBoughtOptions" : "Gekaufte Optionen",
+        "idBoughtOptionsSum" : "Summe Ausgaben Optionen:",
+        "idBoughtStocks" : "Aktien gekauft:",
+        "idSoldStocks" : "Aktien verkauft:",
         # short name, list name, used cols, to delete cols
         "Transaktionen" : {            
             'name'    : 'Transaktionen Aktien- und Indexoptionen', # tabellenname
-            'filters'             : ['Symbol', 'Datum/Zeit', 'Menge', 'Erlös', 'Prov./Gebühr', 'Code'],
-            'filters2'            : ['Erlös', 'Prov./Gebühr'],
-            'splits'              : ['Ticker', 'Bis', 'Preis', 'Typ'],
-            'filterExecutedShorts': ["Datum/Zeit", 'Ticker', 'Bis', 'Preis', 'Menge'],
-            'filterSoldOptions'   : ["Code", "^[OC]$"],
-            'filterExeOptions'    : ["Code", "A.*"],
-            'filterCallsPuts'     : ["Symbol", ".*?[CP]$"],
-            'filterExeCalls'      : ["Symbol", ".*?C$"],
-            'filterExePuts'       : ["Symbol", ".*?P$"],
+            'renames'             : ['Prov./Gebühr', 'Gebühr', 'Erlös', 'Preis'],
+            'filters'             : ['Symbol', 'Datum/Zeit', 'Menge', 'Preis', 'Gebühr', 'EURUSD', 'EkEuro', 'Code'],
+            'toNumber'            : ['Preis', 'Gebühr'],
+            'colsSum'             : ['EkEuro'],
+            'splits'              : ['Symbol', 'Bis', 'Preis', 'Typ'],
+            'filterExecutedShorts': ["Datum/Zeit", 'Symbol', 'Bis', 'Preis', 'Menge', 'Gebühr','EURUSD', 'EkEuro'],
+            'filterSoldOptions'   : {
+                "col" :"Code", 
+                "val" : "^[OC]$"
+            },
+            'filterExeOptions'    :  {
+                "col" :"Code", 
+                "val" : "A.*"
+            },
+            'filterCallsPuts'     : {
+                "col" :"Symbol", 
+                "val" : ".*?[CP]$"
+            },
+            'filterExeCalls'      :  {
+                "col" :"Symbol", 
+                "val" : ".*?C$"
+            },
+            'filterExePuts'       :  {
+                "col" :"Symbol", 
+                "val" : ".*?P$"
+            },
             'symbol'              : 'Symbol',
             'time'                : 'Datum/Zeit',
             'bis'                 : 'Bis',
-            'erlös'               : 'Erlös',
+            'erlös'               : 'Preis',
+            'gebühr'              : 'Gebühr',
+            'menge'               : 'Menge',
             'gewinn'              : 'Gewinn',
             'verlust'             : 'Verlust',
         } ,
         "Aktien" : {            
             'name'    : 'Transaktionen Aktien', 
-            'filters'      : ['Datum/Zeit', 'Symbol', 'T.-Kurs', 'Menge'], #, 'Prov./Gebühr'],
-            'filterSold'   : ["Code", "^C;Ex$"],
-            'filterBuy'    : ["Code", "^O$"],
-            'renames'      : ['T.-Kurs', 'Preis', 'Symbol', 'Ticker'],
-            'toNumber'     : ['Preis', 'Menge'],
+            'renames'      : ['T.-Kurs','Preis', 'Prov./Gebühr', 'Gebühr'],
+            'filters'      : ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'EURUSD', 'EkEuro'],
+            'filterSold'   : {
+                "col" :"Code", 
+                "val" : "^C;Ex$"
+            },
+            'filterBuy'   : {
+                "col" :"Code", 
+                "val" : "^O$"
+            },
+            'toNumber'     : ['Preis', 'Menge', 'Gebühr','EURUSD'],
+            'time'         : 'Datum/Zeit',
+            'preis'        : 'Preis',
+            'menge'        : 'Menge',
+            'gebühr'       : 'Gebühr',
+        },
+        "Forex" : {            
+            'name'    : 'Forex-G&V-Details', 
+            'renames'      : ['Menge', 'USD', 'Erlös in EUR', 'EUR'],
+            'filters'      : ['Datum/Zeit', 'Beschreibung', 'Menge', 'Erlös in EUR'], #, 'Prov./Gebühr'],
+            'toNumber'     : ['USD', 'EUR'],
+            'time'         : 'Datum/Zeit',
         },
         'Zinsen' : {
             'name'    : 'Zinsen',
@@ -44,17 +86,21 @@ tableNames = {
         },
         'Performance' : {
             'name'    : 'Mark-to-Market-Performance-Überblick',
-            'filters': ["Vermögenswertkategorie", "Aktien"],
+            'renames' : ['Vorher Menge', 'Menge'],
+            'filterStocks'   : {
+                "col" :"Vermögenswertkategorie", 
+                "val" : "Aktien"
+            },
+            'filters': ["Symbol", "Menge"],
                        # Name vorher, Name nachher usw.
-            'renames' : ['Vorher Menge', 'Menge', 'Symbol', 'Ticker']
         },
         'Realisiert'  : {
             'name'    : 'Übersicht  zur realisierten und unrealisierten Performance',
             'usedCols': [ 'Vermögenswertkategorie','Gesamt'],
             'delCols' : ['Symbol', 'Kostenanp.'],
             'filters' : ['Gesamt (Alle Vermögenswerte)'],
-            # rename nach position
             'renames' : ['Gesamt Aktien','Gesamt Optionen','Gesamt Devisen']
+            # rename nach position
         }
     }
 }

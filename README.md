@@ -1,6 +1,6 @@
 # IbkrKontoauszugExtraktor
 ##Disclaimer
-Dieses Programm und dessen Ergebnisse sind nicht geprüft und somit gibt es hier keine Garantie, das die Ausgabe korrekt ist.
+Dieses Programm und dessen Ergebnisse sind nicht geprüft und somit gibt es hier keine Garantie, dass die Ausgabe korrekt ist.
 Die Ausgabe muss deshalb unbedingt noch überprüft werden. Notfalls wenden sie sich an ihren Steuerberater.
 
 Captrader/Ibkr Kontoauszug Csv Extraktor  

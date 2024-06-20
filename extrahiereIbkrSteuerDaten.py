@@ -1,10 +1,8 @@
 '''
 todos
-Call kauf Code:C
-put kauf  Code:C
-Aktien kauf
-Aktien verkauf
-umrechnen in euro
+ move check_quantity,calculate_profit_loss and update_stock_quantities
+   to filter.py
+   move prints to display.py
 '''
 import pandas as pd
 import argparse
@@ -16,68 +14,59 @@ import filter
 import display as dp
 #--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
-def subtractExecutedCallsFromPuts(puts_df, calls_df):
-    p = puts_df
-    # Konvertiere das Datum/Zeit Feld in ein datetime Objekt für einfachere Verarbeitung
-    sd = 'Datum/Zeit'
-    sp = 'Preis'
-    sm = 'Menge'
-    st = 'Ticker'
-    
-    p[sd] = p[sd].str.replace(',', '')
-    p[sd] = pd.to_datetime(p[sd])
-    calls_df[sd] = pd.to_datetime(calls_df[sd])
-    # Konvertiere Preis- und Mengen-Spalten von String zu float bzw. int
-    p[sp] = p[sp].astype(float)
-    p[sm] = p[sm].astype(int)
-    calls_df[sp] = calls_df[sp].astype(float)
-    calls_df[sm] = calls_df[sm].astype(float)
-    
-    results = []    
-    # Iteriere über die Ticker in den Calls
-    for ticker in calls_df[st].unique():
-        calls = calls_df[calls_df[st] == ticker]
-        puts = p[p[st] == ticker]        
-        # Berechne die minimale Anzahl an Puts und Calls
-        total_quantity = min(puts[sm].sum(), calls[sm].sum())        
-        if total_quantity > 0:
-            # Iteriere über die Calls und Puts bis die Mengen aufgebraucht sind
-            for call_idx, call_row in calls.iterrows():
-                if total_quantity <= 0:
-                    break
-                for put_idx, put_row in puts.iterrows():
-                    if total_quantity <= 0:
-                        break                    
-                    # Berechne die Menge für diese Transaktion
-                    transaction_quantity = min(call_row[sm], put_row[sm], total_quantity)
-                    if transaction_quantity > 0:
-                        results.append({
-                            st: ticker,
-                            'Datum/Zeit_put': put_row[sd],
-                            'Datum/Zeit_call': call_row[sd],
-                            'Preis_put': put_row[sp],
-                            'Preis_call': call_row[sp],
-                            'Preis_Differenz': (call_row[sp] - put_row[sp]),
-                            sm: transaction_quantity
-                        })
-                        # Reduziere die Mengen und die Transaktions Menge
-                        p.at[put_idx, sm] -= transaction_quantity
-                        calls_df.at[call_idx, sm] -= transaction_quantity
-                        total_quantity -= transaction_quantity    
-    # Erstelle einen DataFrame aus den Ergebnissen
-    result_df = pd.DataFrame(results)
-    return result_df
+def check_quantity(a, b):
+    a_aggregated = a.groupby('Symbol')['Menge'].sum().reset_index()
+    b_aggregated = b.groupby('Symbol')['Menge'].sum().reset_index()   
+    merged = pd.merge(a_aggregated, b_aggregated, on='Symbol', how='left', suffixes=('_a', '_b'))    
+    merged['Menge_b'] = merged['Menge_b'].fillna(0)    
+    merged['invalid'] = merged['Menge_a'] < merged['Menge_b']
+    invalids = merged[merged['invalid']]
+    count = merged['invalid'].sum()
+    if(count>0):
+        print("\n!!! Fehler Anzahl der verkauften Aktien höher als der Bestand für")
+        print(invalids['Symbol'].to_string())
+        print("\n Bestand:\n",a.to_string())
+        print("\n Verkauf:\n",b.to_string())
+        exit()        
+    return count, invalids
+#--------------------------------------------------------------------------------------------------------------------
+def calculate_profit_loss(a, b):
+    if globals.debug:
+      print(a.to_string())
+      print(b.to_string())
+
+    colsRemove = ['Bis','Gebühr','EURUSD','Preis']
+    a = a.drop(columns=colsRemove, errors='ignore')
+    b = b.drop(columns=colsRemove, errors='ignore')
+
+    check_quantity(a,b)
+    merged = pd.merge(a, b, on=['Symbol'], suffixes=('_Kauf', '_Verkauf'))
+    merged['Preis_Differenz'] = merged['EkEuro_Verkauf'] + merged['EkEuro_Kauf']
+    return merged
+#--------------------------------------------------------------------------------------------------------------------
+def update_stock_quantities(a, b):
+    # Aggregiere die Mengen der Verkäufe nach Symbol
+    b_aggregated = b.groupby('Symbol')['Menge_Verkauf'].sum().reset_index()    
+    # Mergen der Bestands- und Verkaufsdaten basierend auf Symbol
+    merged = pd.merge(a, b_aggregated, on='Symbol', how='left')    
+    # Ersetze NaN in Menge_Verkauf mit 0 (falls ein Symbol in a, aber nicht in b existiert)
+    merged['Menge_Verkauf'] = merged['Menge_Verkauf'].fillna(0)    
+    # Subtrahiere die verkauften Mengen von den Bestandsmengen
+    merged['Menge'] = merged['Menge'] - merged['Menge_Verkauf']
+    # Entferne die Spalte Menge_Verkauf und andere zusätzliche Spalten, die nicht in a vorhanden sind
+    merged = merged[a.columns]
+    return merged
 #--------------------------------------------------------------------------------------------------------------------
 def getExecutedShorts(tables):
     t=filter.soldCallsPuts(tables)
-    r=filter.getOptionValues(t)
-    dp.showExecutedShorts(t,r)
+    s=filter.getSumOptions(t)
+    dp.showSoldShorts(t,s)
     t=filter.boughtCallsPuts(tables)
-    r=filter.getOptionValues(t)
-    dp.showExecutedShorts(t,r)
+    s=filter.getSumOptions(t)
+    dp.showBoughtShorts(t,s)
     executedShorts = filter.executedOptions(tables)
-    p = filter.executedPuts(executedShorts)
-    c = filter.executedCalls(executedShorts)
+    p = filter.executedPutsCalls(tables,executedShorts,'filterExePuts')
+    c = filter.executedPutsCalls(tables,executedShorts,'filterExeCalls')
     return executedShorts, p,c
 #--------------------------------------------------------------------------------------------------------------------
 def showTaxRelevantTables(tables):
@@ -86,34 +75,41 @@ def showTaxRelevantTables(tables):
     dp.showQuellensteuer(*filter.tableQuellensteuer(tables))
     dp.showDividenden(*filter.tableDividenden(tables))
 #--------------------------------------------------------------------------------------------------------------------
-def showCorrectedCalculation(tables):
+def showCorrectedCalculation(tables,filename:str):
     stocksStart = filter.tableStocksStart(tables)
     m = None
-    try:
-        stocksStart = db.loadStockFromYearBefore("stocksbefore.csv")
-    except:
-        pass
+    try:     
+        stocksStart = db.loadStockFromYearBefore(filename)
+    except:  pass
 
+    print("\n","!"*80,"\n  todo Kein Steuerdokument und vor Benutzung sorgfältig zu prüfen\n","!"*80)
     executedShorts,p,c = getExecutedShorts(tables)
     if globals.debug: dp.showExecutedShorts(executedShorts)
-    dp.showStartStocks(stocksStart)
+    dp.showStartStocks(stocksStart) # todo calculate EkEuro
     stocksBuy = filter.tableStocksBuy(tables)
     dp.showBoughtStocks(stocksBuy)
-    stocksSold = filter.tableStocksSell(tables)
-    dp.showSoldStocks(stocksSold)
-    stocksSold ["Menge"] /= -100
     stocksBuy  ["Menge"] /= 100
     stocksStart["Menge"] /= 100
     dp.showExecutedPuts(p)
-    dp.showExecutedCalls(c)
+    stocksSold = filter.tableStocksSell(tables)
     p = filter.merge(stocksStart,p)
     p = filter.merge(stocksBuy,p)
+    if globals.debug:
+        print("\nAktien gesamt:\n", p.to_string())
+
+    dp.showExecutedCalls(c)
+    dp.showSoldStocks(stocksSold)
+    stocksSold ["Menge"] /= -100
+    c = c.drop(columns=["Bis"], errors='ignore')
     c = filter.merge(stocksSold,c)
-    print("\n","!"*80,"\ntodo rechne Provision bei positiven Verkauf vom Aktienverkauf gewinn noch ab\n","!"*80)
-    putsMinusCalls = subtractExecutedCallsFromPuts(p, c)
-    dp.showPutsVsCalls(putsMinusCalls)
+    if globals.debug:
+        print("\nAktien verkauft gesamt:\n", c.to_string())
+
+    t = calculate_profit_loss(p,c)
+    dp.showStocksSellProfit(t)
+    p=update_stock_quantities(p,t)
     filter.tableRemainingExecutedPuts(p)
-    p = p[p["Menge"]>0]
+    #p = p[p["Menge"]>0]
     p["Menge"] *= 100
     dp.showRemainingStocks(p)
     db.saveRemainingStocks("stocksafter.csv", p)    
@@ -127,7 +123,7 @@ def parseArguments():
     parser.add_argument('--table', type=str, help='Tabellenname zum Anzeigen')
     parser.add_argument('--columns', type=str, help='Spalten zum Anzeigen (z.B., "0-5")')
     parser.add_argument('--tax', action='store_true', help='Tax output')
-    parser.add_argument('--new', action='store_true', help='Manual calculation')
+    parser.add_argument('--new', type=str, help='Manual calculation')
     parser.add_argument('--list', action='store_true', help='Ausgabe verfügbarer Tabellen')
     parser.add_argument('--align', type=str, help='Align csv separators')
     return parser.parse_args()
@@ -143,17 +139,18 @@ def main():
         filename = args.align
 
     tables = db.CSVTableProcessor(filename, delimiter=args.delimiter, decimal=args.decimal, encoding=args.encoding).getTables()
-    filter.setTables(tables)
+    #filter.setTables(tables)
     if args.list:
         availableTables = list(tables.keys())
-        print("Verfügbare Tabellen:", availableTables)
+        print("Verfügbare Tabellen:")
+        for table in availableTables: print(f"  '{table}'")
     if args.table:
         dp.showSpecificTable(tables,args.table,args.columns)
 
     if args.tax:
         showTaxRelevantTables(tables)
     if args.new:
-        showCorrectedCalculation(tables)
+        showCorrectedCalculation(tables,args.new)
 #--------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__": 
     main()

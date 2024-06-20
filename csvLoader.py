@@ -3,6 +3,7 @@ Loads the aligned Captrader csv file into memeory and makes pandas dataframes ou
 All the containing tables can be retrieved with getTables()
 '''
 import pandas as pd
+import numpy as np
 #--------------------------------------------------------------------------------------------------------------------
 class MyCustomError(Exception):
     pass
@@ -21,7 +22,8 @@ class CSVTableProcessor:
             print(f"Error reading CSV file: {e}")
             self.data = None
             exit()
-        self.tables = self._split_into_tables()
+        tables = self._split_into_tables()
+        self.tables = {name: i.loc[:, i.columns.notnull()] for name, i in tables.items()}  
     #-------------------------------------------------------------------------------------------------
     def _split_into_tables(self):
         """Teilt die Daten in separate Tabellen auf, basierend auf den Werten in Spalte A und B."""
@@ -38,6 +40,7 @@ class CSVTableProcessor:
                 if current_table_name is not None and current_table_data:
                     # Speichern der vorherigen Tabelle
                     tables[current_table_name] = pd.DataFrame(current_table_data[1:], columns=current_table_data[0])
+                    tables[current_table_name][['EURUSD','EkEuro']] =  np.nan
                 current_table_name = table_name
                 current_table_data = [row[2:].tolist()]
             elif row_type == 'Data':
