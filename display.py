@@ -1,6 +1,8 @@
 import pandas as pd
 import globals
+import language as lg
 
+lng = lg.selected
 #--------------------------------------------------------------------------------------------------
 def copyAllRows(frm, to):
     # Übertragen der Spalten "Symbol" und "Menge" von Tabelle a zu Spalten "a" und "b" in Tabelle x
@@ -49,42 +51,57 @@ def showTableColumn(prefix,table, frm, to):
 #--------------------------------------------------------------------------------------------------------------------
 def showStartStocks(t):
     showLine()
+    showLine()
     print("Aktien Beginn:\n", t)
 #--------------------------------------------------------------------------------------------------------------------
-def showExecutedShorts(t,sum=None):
+def showSoldShorts(t,sum=None):
     showLine()
-    print("Executed Shorts\n", t.to_string(na_rep='-'))
+    st = lng["idSoldOptions"]
+    print(f"{st}\n", t.to_string(na_rep='-'))
     if not sum is None:
         showLine()
-        print(sum.to_string(na_rep='-'))
+        sumStr = lng["idSoldOptionsSum"]
+        print(sumStr,sum)
+#--------------------------------------------------------------------------------------------------------------------
+def showBoughtShorts(t,sum=None):
+    showLine()
+    st = lng["idBoughtOptions"]
+    print(f"{st}\n", t.to_string(na_rep='-'))
+    if not sum is None:
+        showLine()
+        sumStr = lng["idBoughtOptionsSum"]
+        print(sumStr,sum)
 #--------------------------------------------------------------------------------------------------
 def showExecutedPuts(t):
     showLine()
     print("Ausgeführte Puts\n" , t.to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showExecutedCalls(t):
-    print("\nAusgeführte Calls\n", t.to_string(na_rep='-'))
+    showLine()
+    print("Ausgeführte Calls\n", t.to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
-def showPutsVsCalls(t):
-    if not t.empty:
-        print("\nCalls vs puts:\n", t.to_string(na_rep='-'))
-        col= "Preis_Differenz"
-        plus = t[t[col] > 0][col].sum()
-        minus = t[t[col] < 0][col].sum()
-        showLine()
-        print("Aktien Gewinn:", 100*plus)
-        print("Aktien Verlust:", 100*minus)
-        showLine()
+def showExecutedShorts(t):
+    print("\nAusgeführte Shorts\n", t.to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showBoughtStocks(t):
     showLine()
-    print("Aktien gekauft:\n", t)
+    s = lng["idBoughtStocks"]
+    print(s+"\n", t)
 #--------------------------------------------------------------------------------------------------
 def showSoldStocks(t):
     showLine()
-    print("Aktien verkauft:\n", t)
+    s = lng["idSoldStocks"]
+    print(s+"\n", t)
+#--------------------------------------------------------------------------------------------------
+def showStocksSellProfit(t):
+    showLine()
+    print("Berechnung Käufe - Verkäufe:\n" ,t.to_string())
+    showLine()
+    sum = t['Preis_Differenz'].sum()
+    print("Profit:" ,sum)
 #--------------------------------------------------------------------------------------------------
 def showRemainingStocks(p):
+    showLine()
     if globals.debug: print("Übrig gebliebene puts:\n", p.to_string(na_rep='-'))
     print("\nAktienbestand Ende:\n", p[p["Menge"]>0].to_string(na_rep='-'))
     print("-"*100)
