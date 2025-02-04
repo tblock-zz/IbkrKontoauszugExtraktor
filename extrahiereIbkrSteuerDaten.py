@@ -12,6 +12,10 @@ import alignCsv as al
 import csvLoader as db
 import filter
 import display as dp
+
+import language as lg
+lng = lg.selected
+
 #--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
 def check_quantity(a, b):
@@ -30,18 +34,97 @@ def check_quantity(a, b):
         exit()        
     return count, invalids
 #--------------------------------------------------------------------------------------------------------------------
+def fifo_merge(a, b):
+    # !!!! todo use language strings
+    ltr = lng['Transaktionen']
+    strTime   = ltr['time']
+    strMenge = ltr['menge']
+    strSymbol = ltr['symbol']
+    strEkEuro = 'EkEuro'
+
+    a = a.sort_values(by=strTime)
+    b = b.sort_values(by=strTime)
+    
+    merged_list = []
+
+    for symbol in a[strSymbol].unique():
+        a_symbol = a[a[strSymbol] == symbol].copy()
+        b_symbol = b[b[strSymbol] == symbol].copy()
+        
+        while not a_symbol.empty and not b_symbol.empty:
+            a_row = a_symbol.iloc[0]
+            b_row = b_symbol.iloc[0]
+            
+            menge_kauf = a_row[strMenge]
+            menge_verkauf = b_row[strMenge]
+            
+            menge = min(menge_kauf, menge_verkauf)
+            
+            ek_euro_kauf = a_row['EkEuro'] 
+            ek_euro_verkauf = b_row['EkEuro'] * (menge)
+            
+            merged_list.append({
+                f'{strTime}_Kauf': a_row[strTime],
+                #'Datum/Zeit_Kauf': a_row[strTime],
+                f'{strSymbol}' : symbol,
+                f'{strMenge}_Kauf': menge,
+                f'{strEkEuro}_Kauf': ek_euro_kauf,
+                f'{strTime}_Verkauf': b_row[strTime],
+                f'{strMenge}_Verkauf': menge,
+                f'{strEkEuro}_Verkauf': ek_euro_verkauf,
+                'Preis_Differenz': ek_euro_verkauf + ek_euro_kauf
+            })
+            
+            a_symbol.at[a_symbol.index[0], 'Menge'] -= menge
+            b_symbol.at[b_symbol.index[0], 'Menge'] -= menge
+            
+            if a_symbol.iloc[0]['Menge'] == 0:
+                a_symbol = a_symbol.iloc[1:]
+            if b_symbol.iloc[0]['Menge'] == 0:
+                b_symbol = b_symbol.iloc[1:]
+        
+        # Add remaining rows in a_symbol to merged_list
+        for _, row in a_symbol.iterrows():
+            merged_list.append({
+                f'{strTime}_Kauf': row[strTime],
+                f'{strSymbol}' : symbol,
+                f'{strMenge}_Kauf': row['Menge'],
+                f'{strEkEuro}_Kauf': row['EkEuro'],
+                f'{strTime}_Verkauf': None,
+                f'{strMenge}_Verkauf': None,
+                f'{strEkEuro}_Verkauf': None,
+                'Preis_Differenz': None
+            })
+    
+    merged_df = pd.DataFrame(merged_list)
+    return merged_df
+#--------------------------------------------------------------------------------------------------------------------
 def calculate_profit_loss(a, b):
+    a = a.sort_values(by='Datum/Zeit')
+    b = b.sort_values(by='Datum/Zeit')
     if globals.debug:
+      print("#" * 80)
       print(a.to_string())
       print(b.to_string())
 
-    colsRemove = ['Bis','Gebühr','EURUSD','Preis']
+    colsRemove = ['Bis','Gebühr','USDEUR','Preis']
     a = a.drop(columns=colsRemove, errors='ignore')
     b = b.drop(columns=colsRemove, errors='ignore')
+    if globals.debug:
+      print("#" * 80)
+      print(a.to_string())
+      print(b.to_string())
 
     check_quantity(a,b)
-    merged = pd.merge(a, b, on=['Symbol'], suffixes=('_Kauf', '_Verkauf'))
-    merged['Preis_Differenz'] = merged['EkEuro_Verkauf'] + merged['EkEuro_Kauf']
+    # Berechne den Kaufpreis pro Aktie
+    b['EkEuro'] = b['EkEuro'] / b['Menge']
+    merged = fifo_merge(a,b)
+
+    #merged = pd.merge(a, b, on=['Symbol'], suffixes=('_Kauf', '_Verkauf'))
+    if globals.debug:
+      print("#" * 80)
+      print(merged.to_string())
+      print("#" * 80)
     return merged
 #--------------------------------------------------------------------------------------------------------------------
 def update_stock_quantities(a, b):
@@ -77,6 +160,7 @@ def showTaxRelevantTables(tables):
 #--------------------------------------------------------------------------------------------------------------------
 def showCorrectedCalculation(tables,filename:str):
     stocksStart = filter.tableStocksStart(tables)
+
     m = None
     try:     
         stocksStart = db.loadStockFromYearBefore(filename)
@@ -85,18 +169,20 @@ def showCorrectedCalculation(tables,filename:str):
     print("\n","!"*80,"\n  todo Kein Steuerdokument und vor Benutzung sorgfältig zu prüfen\n","!"*80)
     executedShorts,p,c = getExecutedShorts(tables)
     if globals.debug: dp.showExecutedShorts(executedShorts)
-    dp.showStartStocks(stocksStart) # todo calculate EkEuro
-    stocksBuy = filter.tableStocksBuy(tables)
+    dp.showStartStocks(stocksStart.sort_values(by='Datum/Zeit')) # todo calculate EkEuro
+    stocksBuy = filter.tableStocksBuy(tables).sort_values(by='Datum/Zeit')
     dp.showBoughtStocks(stocksBuy)
     stocksBuy  ["Menge"] /= 100
     stocksStart["Menge"] /= 100
+    p = p.sort_values(by='Datum/Zeit')
     dp.showExecutedPuts(p)
-    stocksSold = filter.tableStocksSell(tables)
+    stocksSold = filter.tableStocksSell(tables).sort_values(by='Datum/Zeit')
     p = filter.merge(stocksStart,p)
     p = filter.merge(stocksBuy,p)
     if globals.debug:
         print("\nAktien gesamt:\n", p.to_string())
 
+    c = c.sort_values(by='Datum/Zeit')
     dp.showExecutedCalls(c)
     dp.showSoldStocks(stocksSold)
     stocksSold ["Menge"] /= -100
@@ -108,10 +194,12 @@ def showCorrectedCalculation(tables,filename:str):
     t = calculate_profit_loss(p,c)
     dp.showStocksSellProfit(t)
     p=update_stock_quantities(p,t)
-    filter.tableRemainingExecutedPuts(p)
-    #p = p[p["Menge"]>0]
+    p = filter.tableRemainingExecutedPuts(p,t)
+    p = p[p["Menge"]>0]
     p["Menge"] *= 100
+    #y = y.iloc[:, :-1]
     dp.showRemainingStocks(p)
+    #print(p)
     db.saveRemainingStocks("stocksafter.csv", p)    
 #--------------------------------------------------------------------------------------------------------------------
 def parseArguments():
@@ -126,6 +214,7 @@ def parseArguments():
     parser.add_argument('--new', type=str, help='Manual calculation')
     parser.add_argument('--list', action='store_true', help='Ausgabe verfügbarer Tabellen')
     parser.add_argument('--align', type=str, help='Align csv separators')
+    #return parser.parse_args([r'C:\Users\TomHome\IONOS HiDrive\users\tblock\Tom\prg\python\IbkrKontoauszugExtraktor\converted', '--tax'])
     return parser.parse_args()
 #--------------------------------------------------------------------------------------------------------------------
 def main():
@@ -143,7 +232,7 @@ def main():
     if args.list:
         availableTables = list(tables.keys())
         print("Verfügbare Tabellen:")
-        for table in availableTables: print(f"  '{table}'")
+        for idx, table in enumerate(availableTables, start=1): print(f"  {idx}: '{table}'")
     if args.table:
         dp.showSpecificTable(tables,args.table,args.columns)
 

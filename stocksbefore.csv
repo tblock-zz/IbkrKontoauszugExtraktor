@@ -1,3 +1,4 @@
-Datum/Zeit,Symbol,Preis,Menge,Gebühr,EURUSD,EkEuro
-2023-01-01 00:00:00,XXX,0.0,0,0,0,0
-
+Datum/Zeit,Symbol,Preis,Menge,Gebühr,USDEUR,EkEuro
+2023-01-27 16:20:00,PFE,44.0,100,0,0.95,-4400
+2023-01-27 16:20:00,PFE,45.5,100,0,0.95,-4550
+2023-07-28 16:20:00,PFE,37.0,100,0,0.95,-3700

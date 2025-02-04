@@ -46,7 +46,7 @@ def getRowsOfColumnsContainingStr(table, colName:str, pattern:str):
 #--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
 def addEurUsdToTable(tables,t,sTable:str):
-    eu = "EURUSD"
+    eu = "USDEUR"
     acc = lng[sTable]
     dt = acc['time'] # suche nach transaktionszeit
     tf = tableForex(tables)
@@ -115,9 +115,9 @@ def tableStocksBuy(tables):
     t = getRowsOfColumnsContainingStr(t, f["col"], f["val"])
     t = toNumber(t[acc['filters']],n)
     t = addEurUsdToTable(tables, t, 'Aktien')
-    p,g,w,m = acc['preis'],acc['gebühr'],'EURUSD',acc['menge']
+    p,g,w,m = acc['preis'],acc['gebühr'],'USDEUR',acc['menge']
     t['EkEuro'] = (t[g]-t[p]*t[m])*t[w]
-    return t;
+    return t
 #--------------------------------------------------------------------------------------------------------------------
 def tableStocksSell(tables):
     acc = lng['Aktien']
@@ -131,13 +131,18 @@ def tableStocksSell(tables):
     # und wandle Erlös und Gebühr nach Euro
     t = addEurUsdToTable(tables, t, 'Aktien')
     t = toNumber(t,n)
-    p,g,w,m = acc['preis'],acc['gebühr'],'EURUSD',acc['menge']
+    p,g,w,m = acc['preis'],acc['gebühr'],'USDEUR',acc['menge']
     t = toNumber(t,[p,g,w,m])
     t['EkEuro'] = (t[g]-t[p]*t[m])*t[w]
     return t
 #--------------------------------------------------------------------------------------------------------------------
-def tableRemainingExecutedPuts(p):    
+def tableRemainingExecutedPuts(p,t):    
     p.drop(lng['Transaktionen']['bis'], axis=1, inplace=True)
+    t= t[t.isnull().any(axis=1)]  # Behalte nur Zeilen mit NaN oder None in irgendeiner Spalte
+    t = t.drop(columns=t.filter(like='_Verkauf').columns)
+    t = t.rename(columns=lambda x: x.replace('_Kauf', ''))
+    p = p[p[['Datum/Zeit', 'Symbol']].apply(tuple, 1).isin(t[['Datum/Zeit', 'Symbol']].apply(tuple, 1))]
+    p['Menge'] = p['Menge'].abs()
     return p
 #--------------------------------------------------------------------------------------------------------------------
 def tablePerformance(tables):    
@@ -168,7 +173,7 @@ def findWechselkurs(forexTable,datetime,symbol):
 def addEurValuesToOptions(tables,usePositive:bool):
     acc = lng['Transaktionen']
     f,e,g,r,n = acc['filterSoldOptions'], acc['erlös'], acc['gebühr'], acc['renames'], acc['toNumber']
-    eu = "EURUSD"
+    eu = "USDEUR"
     t = tableTransactionsOptions(tables)
     t = renameCols(t,r)
     t = getRowsOfColumnsContainingStr(t, f["col"], f["val"]).copy()
@@ -196,7 +201,7 @@ def calculateOptionsEuro(tables,t):
     f = acc['filterCallsPuts']
     df = getRowsOfColumnsContainingStr(t, f["col"], f["val"])
     df = df[acc['filters']]
-    df['EkEuro'] = (df[acc['erlös']] + df[acc['gebühr']])*df['EURUSD']
+    df['EkEuro'] = (df[acc['erlös']] + df[acc['gebühr']])*df['USDEUR']
     return df
 #--------------------------------------------------------------------------------------------------------------------
 def soldCallsPuts(tables):
@@ -217,11 +222,17 @@ def splitSymbolExecutedShorts(table):
     symbol = acc['symbol']
     t = table[symbol]
     split_columns = t.str.split(' ', expand=True)
+    # Check if the number of split columns matches the expected number
+    expected_columns = len(acc['splits'])
+    if split_columns.shape[1] != expected_columns:
+        empty_df = pd.DataFrame(columns=acc['filterExecutedShorts'])
+        return empty_df
     split_columns.columns = acc['splits']
-    table = delCols(table,[acc['erlös']])
+    table = delCols(table, [acc['erlös']])
     table = table.drop(columns=[symbol]).join(split_columns)
     table = table.drop_duplicates(keep=False)
-    return table[acc['filterExecutedShorts']]   
+    table = table[acc['filterExecutedShorts']]
+    return table
 #--------------------------------------------------------------------------------------------------------------------
 def getOptions(table,type):
     f   = lng['Transaktionen'][type]
@@ -235,7 +246,7 @@ def executedPutsCalls(tables,executedOptionsTable, type):
     t = getOptions(executedOptionsTable, type)
     t = splitSymbolExecutedShorts(t)
     t = addEurUsdToTable(tables, t, 'Aktien')
-    p,g,w,m = acc['erlös'],acc['gebühr'],'EURUSD',acc['menge']
+    p,g,w,m = acc['erlös'],acc['gebühr'],'USDEUR',acc['menge']
     t = toNumber(t,[p,g,w,m])
     fac = -100.0 if type == 'filterExePuts' else 100.0
     t['EkEuro'] = (t[p]*t[m]*fac + t[g])*t[w]

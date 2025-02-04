@@ -25,14 +25,27 @@ def showTables(tables):
 #--------------------------------------------------------------------------------------------------
 def showTableFiltered(t, name, col:str=None, filter:str = None):
     print(f"Tabelle: {name}")
-    if col is None:
+    try:
+      print(t[t[col] == filter])
+    except:    
+      try:
         print(t.to_string(na_rep='-'))  # Gibt die gefilterte Tabelle aus, ohne Kürzungen
-    else:
-        print(t[t[col] == filter])
+      except:
+        print("nicht verfügbar")    
 #--------------------------------------------------------------------------------------------------
-def showSpecificTable(tables, tableName:str,columns):
-    table = tables.get(tableName)
-    if table is not None:
+def showSpecificTable(tables, tableName:str,columns):   
+    table = None
+    try:
+        if tableName.isdigit():
+            index = int(tableName) - 1  # Da Listen bei 0 beginnen, subtrahieren wir 1
+            if 0 <= index < len(tables):
+                table_key = list(tables.keys())[index]
+                table = tables[table_key]
+                tableName = table_key
+            else:
+                print(f"Index {index + 1} liegt außerhalb des gültigen Bereichs.")
+        else:
+            table = tables.get(tableName)
         if columns:
             col_range = columns.split('-')
             start_col = int(col_range[0])
@@ -40,7 +53,7 @@ def showSpecificTable(tables, tableName:str,columns):
             table = table.iloc[:, start_col:end_col]
         print(f"Tabelle: {tableName}")
         print(table.to_string())
-    else:
+    except:
         print(f"Tabelle '{tableName}' nicht gefunden.")
 #--------------------------------------------------------------------------------------------------------------------
 def showTableColumn(prefix,table, frm, to):
@@ -95,6 +108,7 @@ def showSoldStocks(t):
 #--------------------------------------------------------------------------------------------------
 def showStocksSellProfit(t):
     showLine()
+    t = t.dropna()
     print("Berechnung Käufe - Verkäufe:\n" ,t.to_string())
     showLine()
     sum = t['Preis_Differenz'].sum()
@@ -103,7 +117,8 @@ def showStocksSellProfit(t):
 def showRemainingStocks(p):
     showLine()
     if globals.debug: print("Übrig gebliebene puts:\n", p.to_string(na_rep='-'))
-    print("\nAktienbestand Ende:\n", p[p["Menge"]>0].to_string(na_rep='-'))
+    #print("\nAktienbestand Ende:\n", p[p["Menge"]>0].to_string(na_rep='-'))
+    print("\nAktienbestand Ende:\n", p)
     print("-"*100)
 #--------------------------------------------------------------------------------------------------
 def showPerformance(table,name):

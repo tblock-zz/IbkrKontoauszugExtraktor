@@ -10,11 +10,11 @@ tableNames = {
         "Transaktionen" : {            
             'name'    : 'Transaktionen Aktien- und Indexoptionen', # tabellenname
             'renames'             : ['Prov./Gebühr', 'Gebühr', 'Erlös', 'Preis'],
-            'filters'             : ['Symbol', 'Datum/Zeit', 'Menge', 'Preis', 'Gebühr', 'EURUSD', 'EkEuro', 'Code'],
+            'filters'             : ['Symbol', 'Datum/Zeit', 'Menge', 'Preis', 'Gebühr', 'USDEUR', 'EkEuro', 'Code'],
             'toNumber'            : ['Preis', 'Gebühr'],
             'colsSum'             : ['EkEuro'],
             'splits'              : ['Symbol', 'Bis', 'Preis', 'Typ'],
-            'filterExecutedShorts': ["Datum/Zeit", 'Symbol', 'Bis', 'Preis', 'Menge', 'Gebühr','EURUSD', 'EkEuro'],
+            'filterExecutedShorts': ["Datum/Zeit", 'Symbol', 'Bis', 'Preis', 'Menge', 'Gebühr','USDEUR', 'EkEuro'],
             'filterSoldOptions'   : {
                 "col" :"Code", 
                 "val" : "^[OC]$"
@@ -47,16 +47,16 @@ tableNames = {
         "Aktien" : {            
             'name'    : 'Transaktionen Aktien', 
             'renames'      : ['T.-Kurs','Preis', 'Prov./Gebühr', 'Gebühr'],
-            'filters'      : ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'EURUSD', 'EkEuro'],
+            'filters'      : ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro'],
             'filterSold'   : {
                 "col" :"Code", 
-                "val" : "^C;Ex$"
+                "val" : "^C;Ex$|C;P|^C$"
             },
             'filterBuy'   : {
                 "col" :"Code", 
-                "val" : "^O$"
+                "val" : "^O$|O;P"
             },
-            'toNumber'     : ['Preis', 'Menge', 'Gebühr','EURUSD'],
+            'toNumber'     : ['Preis', 'Menge', 'Gebühr','USDEUR'],
             'time'         : 'Datum/Zeit',
             'preis'        : 'Preis',
             'menge'        : 'Menge',

@@ -17,14 +17,16 @@ Am Ende wird die Datei `stocksafter.csv` geschrieben, von Aktien, die am Ende na
 Wenn alle Daten in `Dateiname` aktuell sind, so würde man als für einen Jahresabschluß 2023 die Datei `stocksafter.csv` für das nächste Jahr z.B. nach `stocksbefore2024.csv` kopieren.
 
 ##Beispiel neues Konto ab 2023 bei Captrader
-Captrader Auszug von 2023: Captrader2023.csv vom eigenen Konto heruntergeladen   
+- Captrader Auszug von 2023: Captrader2023.csv vom eigenen Konto heruntergeladen   
 
-Nutze die Datei stocksbefore.csv und nenne sie um nach stocksbefore2023.csv 
-`python extrahiereIbkrSteuerDaten.py Captrader2023 --align converted --tax --new stocksbefore2023.csv`  
+- Nutze die Datei stocksbefore.csv und nenne sie um nach stocksbefore2023.csv
+
+`python extrahiereIbkrSteuerDaten.py Captrader2023 --align converted --tax --new stocksbefore2023.csv`
+
 Man erhält die Berechnungen für 2023. 
 Kopiere die Datei stocksafter.csv nach stocksbefore2024.csv schon mal zur Vorbereitung für das nächste Jahr 2024.
 
-Im nächsten Jahr also Anfang 2025 Captrader Auszug von 2024 laden und umbennen nach Captrader2024.csv. Dann das Programm ausführen.   
+Im nächsten Jahr also Anfang 2025 Captrader Auszug von 2024 laden und umbenennen nach Captrader2024.csv. Dann das Programm ausführen.   
 `python extrahiereIbkrSteuerDaten.py Captrader2024 --align converted --tax --new stocksbefore2024.csv`  
 
 Man erhält nun die Berechnungen für 2024 inklusive den Verbliebenen Aktien aus 2023. 
@@ -43,4 +45,19 @@ Nach dem clonen des Repositories folgendes eingeben:
 `pip install requirements.txt`
 
 Open todo's:  
-Umrechnen in Euro
+- sortieren nach Datum
+
+## Anhang
+In Deutschland gilt das FIFO Prinzip.
+
+- Kauf Dollar am Datum_usd zum Kurs usdeur_kauf
+- Kaufs einer Aktie
+  - Datum_ek, Anzahl_ek, Kurs Dollar_ek, usdeur_ek
+- Verkauf einer Aktie
+  - Datum_vk, Kurs Dollar_vk, Kurs usdeur_vk
+- Berechnung:
+  - Einfach: Gewinn = Anzahl*(usdeur_vk - usdeur_ek)
+  - Richtig:
+    - Gewinn = Währungsgewinn + Verkaufsgewinn
+      - Währungsgewinn = Anzahl*(usdeur_ek - usdeur_kauf)
+      - Verkaufsgewinn = Anzahl*(Dollar_vk-Dollar_ek)*((usdeur_vk - usdeur_ek)) tbd

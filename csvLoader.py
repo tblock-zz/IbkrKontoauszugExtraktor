@@ -40,7 +40,7 @@ class CSVTableProcessor:
                 if current_table_name is not None and current_table_data:
                     # Speichern der vorherigen Tabelle
                     tables[current_table_name] = pd.DataFrame(current_table_data[1:], columns=current_table_data[0])
-                    tables[current_table_name][['EURUSD','EkEuro']] =  np.nan
+                    tables[current_table_name][['USDEUR','EkEuro']] =  np.nan
                 current_table_name = table_name
                 current_table_data = [row[2:].tolist()]
             elif row_type == 'Data':
@@ -64,9 +64,17 @@ class CSVTableProcessor:
         return self.tables
     #-------------------------------------------------------------------------------------------------
     def getTable(self, table_name):
-        """Gibt die Tabelle mit dem angegebenen Namen zurück."""
-        return self.tables.get(table_name)
-    #-------------------------------------------------------------------------------------------------
+        """Gibt die Tabelle mit dem angegebenen Namen oder der Position zurück."""
+        if table_name.isdigit():
+            index = int(table_name) - 1  # Da Listen bei 0 beginnen, subtrahieren wir 1
+            if 0 <= index < len(self.tables):
+                table_key = list(self.tables.keys())[index]
+                return self.tables[table_key]
+            else:
+                print(f"Index {index + 1} liegt außerhalb des gültigen Bereichs.")
+                return None
+        else:
+            return self.tables.get(table_name)
 #--------------------------------------------------------------------------------------------------------------------
 def saveRemainingStocks(name, df):
     df.to_csv(name, index=False)
