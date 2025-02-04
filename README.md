@@ -1,48 +1,52 @@
+
 # IbkrKontoauszugExtraktor
-##Disclaimer
-Dieses Programm und dessen Ergebnisse sind nicht geprüft und somit gibt es hier keine Garantie, dass die Ausgabe korrekt ist.
-Die Ausgabe muss deshalb unbedingt noch überprüft werden. Notfalls wenden sie sich an ihren Steuerberater.
 
-Captrader/Ibkr Kontoauszug Csv Extraktor  
-Dieses Python Skript ermöglicht es einfach die einzelnen Tabellen aus dem Auszug von Captrader/IBKR zu extrahieren.
+## Disclaimer
+Bitte beachten Sie, dass dieses Programm und die daraus resultierenden Daten nicht geprüft sind. Es wird daher keine Garantie für die Richtigkeit der Ausgaben übernommen. Eine Überprüfung der Ausgaben ist unerlässlich. Bei Bedarf konsultieren Sie bitte Ihren Steuerberater.
 
-Einfach aufrufen mit  
-`python extrahiereIbkrSteuerDaten.py Dateiname_mit_Pfadname_der_csv_Kontoauszugsdatei  --align converted --tax --new Datei_mit_vor_dem_Kontoauszug_vorhandene_Aktien`
+## Captrader/IBKR Kontoauszug CSV-Extraktor
+Dieses Python-Skript ermöglicht es, einzelne Tabellen aus den Kontoauszügen von Captrader bzw. IBKR effizient zu extrahieren.
 
-Die Option `--new` hat als Argument 'Dateiname`. Es wird die Datei `Dateiname` eingelesen, in der man alle Aktien einträgt, die man schon vor den Transaktionen im neuen Captrader csv Dokument besaß. Die Datei 'stocksbefore.csv` ist ein Beispiel mit einer schon vorhandenen Aktie JNJ. Also wäre ein Beispiel:  
-`python extrahiereIbkrSteuerDaten.py Dateiname_mit_Pfadname_der_csv_Kontoauszugsdatei  --align converted --tax --new stocksbefore.csv`
+### Anwendung
+Führen Sie das Skript mit dem folgenden Befehl aus:
+```bash
+python extrahiereIbkrSteuerDaten.py <Pfad/Dateiname_der_CSV_Kontoauszugsdatei> --align converted --tax --new <Dateiname_vorhandener_Aktien>
+```
+Hierbei ist `--new` gefolgt vom Dateinamen, in dem alle Aktien aufgeführt sind, die bereits vor den Transaktionen im neuen Captrader CSV-Dokument vorhanden waren. Ein praktisches Beispiel hierfür ist:
+```bash
+python extrahiereIbkrSteuerDaten.py <Pfad/Dateiname_der_CSV_Kontoauszugsdatei> --align converted --tax --new stocksbefore.csv
+```
+Am Ende dieses Prozesses wird die Datei `stocksafter.csv` erstellt. Sie enthält die Übersicht der Aktien, die nach allen Transaktionen noch im Bestand sind. Diese Datei nutzt dasselbe Format wie die ursprüngliche Datei.
 
-Am Ende wird die Datei `stocksafter.csv` geschrieben, von Aktien, die am Ende nach allen puts, calls und Aktienverkäufen noch übrig sind. Diese Datei hat das gleiche Format wie `Dateiname`. Man kann in `Dateiname` Aktien auch manuell einfügen, falls man nicht durch alle alten csv Dateien der zurückliegenden Jahre zurück gehen möchte.
+## Beispiel: Neues Konto ab 2023 bei Captrader
+1. Laden Sie den Captrader-Auszug für 2023 (`CaptraderDateiName.csv`) von Ihrem Konto herunter.
+2. Benennen Sie die Datei `stocksbefore.csv` in `stocksbefore2023.csv` um und führen Sie das Skript aus:
+   ```bash
+   python extrahiereIbkrSteuerDaten.py CaptraderDateiName.csv --align Captrader2023.csv --tax --new stocksbefore2023.csv
+   ```
+   Sie erhalten dadurch die Berechnungen für das Jahr 2023. 
+3. Kopieren Sie die Datei `stocksafter.csv` zur Vorbereitung auf das folgende Jahr und benennen Sie diese in `stocksbefore2024.csv` um.
 
-Wenn alle Daten in `Dateiname` aktuell sind, so würde man als für einen Jahresabschluß 2023 die Datei `stocksafter.csv` für das nächste Jahr z.B. nach `stocksbefore2024.csv` kopieren.
-
-##Beispiel neues Konto ab 2023 bei Captrader
-- Captrader Auszug von 2023: Captrader2023.csv vom eigenen Konto heruntergeladen   
-
-- Nutze die Datei stocksbefore.csv und nenne sie um nach stocksbefore2023.csv
-
-`python extrahiereIbkrSteuerDaten.py Captrader2023 --align converted --tax --new stocksbefore2023.csv`
-
-Man erhält die Berechnungen für 2023. 
-Kopiere die Datei stocksafter.csv nach stocksbefore2024.csv schon mal zur Vorbereitung für das nächste Jahr 2024.
-
+Wiederholen Sie diesen Prozess jährlich mit den entsprechenden neuen Daten.
 Im nächsten Jahr also Anfang 2025 Captrader Auszug von 2024 laden und umbenennen nach Captrader2024.csv. Dann das Programm ausführen.   
-`python extrahiereIbkrSteuerDaten.py Captrader2024 --align converted --tax --new stocksbefore2024.csv`  
-
-Man erhält nun die Berechnungen für 2024 inklusive den Verbliebenen Aktien aus 2023. 
-Kopiere die Datei stocksafter.csv nach stocksbefore2025.csv schon mal zur Vorbereitung für das nächste Jahr usw.
+`python extrahiereIbkrSteuerDaten.py Captrader2024.csv --align converted --tax --new stocksbefore2024.csv`  
 
 
-Hilfe mit  
-`python extrahiereIbkrSteuerDaten.py -h`
+### Hilfe
+Zur Anzeige weiterer Optionen nutzen Sie:
+```bash
+python extrahiereIbkrSteuerDaten.py -h
+```
 
 
-Installation:
-Voraussetzung:
-python 3.10 installiert
+## Installation
+Voraussetzungen:
+- Python 3.10 muss installiert sein.
 
-Nach dem clonen des Repositories folgendes eingeben:
-`pip install requirements.txt`
+Nach dem Klonen des Repositories führen Sie den folgenden Befehl aus:
+```bash
+pip install -r requirements.txt
+```
 
 Open todo's:  
 - sortieren nach Datum
