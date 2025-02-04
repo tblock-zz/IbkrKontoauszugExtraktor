@@ -57,7 +57,3 @@ In Deutschland gilt das FIFO Prinzip.
   - Datum_vk, Kurs Dollar_vk, Kurs usdeur_vk
 - Berechnung:
   - Einfach: Gewinn = Anzahl*(usdeur_vk - usdeur_ek)
-  - Richtig:
-    - Gewinn = Währungsgewinn + Verkaufsgewinn
-      - Währungsgewinn = Anzahl*(usdeur_ek - usdeur_kauf)
-      - Verkaufsgewinn = Anzahl*(Dollar_vk-Dollar_ek)*((usdeur_vk - usdeur_ek)) tbd
