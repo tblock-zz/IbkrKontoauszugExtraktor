@@ -109,6 +109,8 @@ def showSoldStocks(t):
 def showStocksSellProfit(t):
     showLine()
     t = t.dropna()
+    t["Menge_Kauf"] *= 100
+    t["Menge_Verkauf"] *= 100
     print("Berechnung Käufe - Verkäufe:\n" ,t.to_string())
     showLine()
     sum = t['Preis_Differenz'].sum()

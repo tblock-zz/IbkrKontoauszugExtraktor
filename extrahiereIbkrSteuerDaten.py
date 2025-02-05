@@ -160,11 +160,11 @@ def showTaxRelevantTables(tables):
 #--------------------------------------------------------------------------------------------------------------------
 def showCorrectedCalculation(tables,filename:str):
     stocksStart = filter.tableStocksStart(tables)
-
     m = None
     try:     
         stocksStart = db.loadStockFromYearBefore(filename)
-    except:  pass
+    except:  
+        pass
 
     print("\n","!"*80,"\n  todo Kein Steuerdokument und vor Benutzung sorgfältig zu prüfen\n","!"*80)
     executedShorts,p,c = getExecutedShorts(tables)
@@ -199,7 +199,6 @@ def showCorrectedCalculation(tables,filename:str):
     p["Menge"] *= 100
     #y = y.iloc[:, :-1]
     dp.showRemainingStocks(p)
-    #print(p)
     db.saveRemainingStocks("stocksafter.csv", p)    
 #--------------------------------------------------------------------------------------------------------------------
 def parseArguments():
