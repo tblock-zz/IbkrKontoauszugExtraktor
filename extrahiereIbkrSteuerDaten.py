@@ -10,6 +10,8 @@ import alignCsv as al
 import csvLoader as db
 import filter
 import display as dp
+import exportCsv
+import exportOds
 from collections import deque
 #--------------------------------------------------------------------------------------------------------------------
 import language as lg
@@ -142,29 +144,45 @@ def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(results)
 #--------------------------------------------------------------------------------------------------------------------
 def getExecutedShorts(tables):
-    t=filter.soldCallsPuts(tables)
-    t['Menge'] = t['Menge'].astype(float)*100
-    sC=filter.getSumOptions(t)
-    dp.showSoldShorts(t,sC)
-    t=filter.boughtCallsPuts(tables)
-    t['Menge'] = t['Menge'].astype(float)*100
-    sP=filter.getSumOptions(t)
-    dp.showBoughtShorts(t,sP)
+    soldOpts=filter.soldCallsPuts(tables)
+    soldOpts['Menge'] = soldOpts['Menge'].astype(float)*100
+    sC=filter.getSumOptions(soldOpts)
+    dp.showSoldShorts(soldOpts,sC)
+    
+    boughtOpts=filter.boughtCallsPuts(tables)
+    boughtOpts['Menge'] = boughtOpts['Menge'].astype(float)*100
+    sP=filter.getSumOptions(boughtOpts)
+    dp.showBoughtShorts(boughtOpts,sP)
+    
     dp.showLine()
     print(f"Gewinn aus Optionsgeschäften: {sC} + {sP} = {sC + sP}")
     dp.showLine()
     executedShorts = filter.executedOptions(tables)
     p = filter.executedPutsCalls(tables,executedShorts,'filterExePuts')
     c = filter.executedPutsCalls(tables,executedShorts,'filterExeCalls')
-    return executedShorts, p,c
+    return soldOpts, boughtOpts, executedShorts, p,c
 #--------------------------------------------------------------------------------------------------------------------
 def showTaxRelevantTables(tables):
-    dp.showPerformance(*filter.tablePerformance(tables))
-    dp.showZinsen(*filter.tableZinsen(tables))
-    dp.showQuellensteuer(*filter.tableQuellensteuer(tables))
-    dp.showDividenden(*filter.tableDividenden(tables))
+    tPerf, namePerf = filter.tablePerformance(tables)
+    dp.showPerformance(tPerf, namePerf)
+    
+    tZinsen, nameZinsen = filter.tableZinsen(tables)
+    dp.showZinsen(tZinsen, nameZinsen)
+    
+    tQuellen, nameQuellen = filter.tableQuellensteuer(tables)
+    dp.showQuellensteuer(tQuellen, nameQuellen)
+    
+    tDiv, nameDiv = filter.tableDividenden(tables)
+    dp.showDividenden(tDiv, nameDiv)
+    
+    return {
+        "zinsen": tZinsen,
+        "quellensteuer": tQuellen,
+        "dividenden": tDiv,
+        "performance": tPerf
+    }
 #--------------------------------------------------------------------------------------------------------------------
-def showCorrectedCalculation(tables,filename:str):
+def showCorrectedCalculation(tables,filename:str, exportFile:str=None):
     stocksStart = filter.tableStocksStart(tables)
     m = None
     try:     
@@ -186,12 +204,115 @@ def showCorrectedCalculation(tables,filename:str):
     dp.showRemainingStocks(r)
     db.saveRemainingStocks("stocksafter.csv", r)    
     #------------------------------------------------------
-    executedShorts,puts,calls = getExecutedShorts(tables)
+    sold, bought, executedShorts,puts,calls = getExecutedShorts(tables)
     if False:
         puts = puts.sort_values(by='Datum/Zeit')
         dp.showExecutedPuts(puts)
         calls = calls.sort_values(by='Datum/Zeit')
         dp.showExecutedCalls(calls)
+    #------------------------------------------------------
+    #------------------------------------------------------
+    if exportFile:
+         # Calculate sums for export
+         profitStocks = t['Gewinn_Euro'].sum()
+         sumSoldOpts = filter.getSumOptions(sold)
+         sumBoughtOpts = filter.getSumOptions(bought)
+         totalOptProfit = sumSoldOpts + sumBoughtOpts
+
+         # Gather tax data again for export (silent capture)
+         # We want aggregated values for the Overview
+         tZinsen, _ = filter.tableZinsen(tables)
+         tQuellen, _ = filter.tableQuellensteuer(tables)
+         tDiv, _ = filter.tableDividenden(tables)
+         
+         # Helper to sum specific columns safely
+         def sumCol(df, col):
+             if df is not None and col in df.columns:
+                 return pd.to_numeric(df[col], errors='coerce').sum()
+             return 0.0
+
+         sumZinsen = sumCol(tZinsen, 'Gesamt Zinsen in EUR')
+         sumQuellen = sumCol(tQuellen, 'Gesamt Quellensteuer in EUR')
+         sumDiv = sumCol(tDiv, 'Gesamtwert in EUR')
+
+         # 1. Steuer Übersicht Sheet
+         overviewData = {
+             "Zinsen (Gesamt)": sumZinsen,
+             "Dividenden (Gesamt)": sumDiv,
+             "Quellensteuer (Gesamt)": sumQuellen,
+             " ": "", # Spacer
+             "Gewinn/Verlust Aktien (FIFO)": profitStocks,
+             "Gewinn/Verlust Optionen": totalOptProfit,
+             "  ": "",
+             "Details:": "Details siehe weitere Arbeitsblätter"
+         }
+         # We also want the detailed tables for Interest/Div/Tax in the overview or maybe separate?
+         # User asked for "Overview with Div, Interest, Tax, StockProfit, OptionProfit". 
+         # I will put the summary at top, and then the detailed tables below in the overview sheet.
+         
+         sheetOverview = [
+             "Steuerliche Übersicht",
+            overviewData,
+             " ",
+             "Detaillierte Tabellen:",
+             "Dividenden", tDiv,
+             "Zinsen", tZinsen,
+             "Quellensteuer", tQuellen
+         ]
+
+         # 2. Aktien Sheet
+         sheetStocks = [
+             "Aktien Handel (FIFO)",
+             "Startbestand", stocksStart,
+             "Käufe", stocksBuy,
+             "Verkäufe", stocksSold,
+             " ",
+             "Gewinn/Verlust Berechnung", t,
+             ["Profit Aktien", "", "", "", "", "", "", profitStocks],
+             " ",
+             "Aktienbestand Ende", r
+         ]
+
+         # 3. Optionen Sheet
+         sheetOptions = [
+             "Optionsgeschäfte",
+             "Verkaufte Optionen", sold,
+             ["Summe Einnahmen", "", "", "", "", "", "", sumSoldOpts],
+             " ",
+             "Gekaufte Optionen", bought,
+             ["Summe Ausgaben", "", "", "", "", "", "", sumBoughtOpts],
+             " ",
+             ["Gewinn aus Optionsgeschäften", "", "", "", "", "", "", totalOptProfit],
+             " ",
+             "Ausgeführte Calls (Aktienabnahme)", calls,
+             "Ausgeführte Puts (Aktienzuteilung)", puts
+         ]
+         
+         if exportFile.lower().endswith('.ods'):
+             sheets = {
+                 "Steuer Übersicht": sheetOverview,
+                 "Aktien": sheetStocks,
+                 "Optionen": sheetOptions
+             }
+             exportOds.exportToOds(exportFile, sheets)
+         else:
+             # Fallback to single sheet/CSV-like dump
+             exportData = {
+                 "Aktien Beginn": stocksStart,
+                 "Aktien gekauft": stocksBuy,
+                 "Aktien verkauft": stocksSold,
+                 "Berechnung Käufe - Verkäufe": t,
+                 "Profit Aktien": profitStocks,
+                 "Aktienbestand Ende": r,
+                 "Verkaufte Optionen": sold,
+                 "Summe Einnahmen Optionen": sumSoldOpts,
+                 "Gekaufte Optionen": bought,
+                 "Summe Ausgaben Optionen": sumBoughtOpts,
+                 "Gewinn aus Optionsgeschäften": totalOptProfit,
+                 "Ausgeführte Puts (Aktienzuteilung)": puts,
+                 "Ausgeführte Calls (Aktienabnahme)": calls
+             }
+             exportCsv.exportToCsv(exportFile, exportData)
 #--------------------------------------------------------------------------------------------------------------------
 def parseArguments():
     parser = argparse.ArgumentParser(description='Lade eine IBKR/CAPTRADER CSV Datei und erstelle Daraus separate Tabellen.')
@@ -205,6 +326,7 @@ def parseArguments():
     parser.add_argument('--new', type=str, help='Manual calculation')
     parser.add_argument('--list', action='store_true', help='Ausgabe verfügbarer Tabellen')
     parser.add_argument('--align', type=str, help='Align csv separators')
+    parser.add_argument('--csv', type=str, help='Dateiname für CSV Export der Ergebnisse')
     #return parser.parse_args([r'C:\Users\TomHome\IONOS HiDrive\users\tblock\Tom\prg\python\IbkrKontoauszugExtraktor\converted', '--tax'])
     return parser.parse_args()
 #--------------------------------------------------------------------------------------------------------------------
@@ -225,10 +347,21 @@ def main():
         for idx, table in enumerate(availableTables, start=1): print(f"  {idx}: '{table}'")
     if args.table:
         dp.showSpecificTable(tables,args.table,args.columns)
+    tax_data = {}
     if args.tax:
-        showTaxRelevantTables(tables)
+        tax_data = showTaxRelevantTables(tables)
     if args.new:
-        showCorrectedCalculation(tables,args.new)
+        showCorrectedCalculation(tables,args.new, args.csv)
+
+        # Re-gather data for ODS if needed, this part inside showCorrectedCalculation handles the export.
+        # However, showCorrectedCalculation is currently handling the export logic.
+        # We need to make sure showCorrectedCalculation has access to the 'tax_data' from showTaxRelevantTables if we want to include it in the report.
+        # But 'showCorrectedCalculation' is called AFTER 'showTaxRelevantTables'.
+        # Actually, let's pass tax_data to showCorrectedCalculation if available, or just re-fetch it inside if needed. 
+        # Simpler: Modify showCorrectedCalculation to call showTaxRelevantTables internally or extract data there?
+        # Argument 'args.tax' controls if we show it on screen.
+        # But for export we definitely want it.
+        pass
 #--------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__": 
     main()

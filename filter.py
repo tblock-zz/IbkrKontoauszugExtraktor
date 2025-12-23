@@ -234,12 +234,32 @@ def soldOptions(tables):
 def boughtOptions(tables):
     return addEurValuesToOptions(tables, False)
 #--------------------------------------------------------------------------------------------------------------------
+def splitOptionSymbol(df):
+    if 'Symbol' not in df.columns:
+        return df
+    
+    # Symbol format "TSLA 03OCT25 420 P"
+    # Split by first space: Ticker vs rest
+    s = df['Symbol'].str.split(' ', n=1, expand=True)
+    if s.shape[1] >= 2:
+        df['Symbol'] = s[0]
+        df.insert(1, 'Optionen', s[1])
+    else:
+        # Fallback if no space found
+        df.insert(1, 'Optionen', '')
+    return df
+
+#--------------------------------------------------------------------------------------------------------------------
 def calculateOptionsEuro(tables,t):
     acc = lng['Transaktionen']
     f = acc['filterCallsPuts']
     df = getRowsOfColumnsContainingStr(t, f["col"], f["val"])
     df = df[acc['filters']]
     df['EkEuro'] = (df[acc['erlös']] + df[acc['gebühr']])*df['USDEUR']
+    m = acc['menge']
+    if m in df.columns:
+        df[m] = pd.to_numeric(df[m], errors='coerce') / 100.0
+    df = splitOptionSymbol(df)
     return df
 #--------------------------------------------------------------------------------------------------------------------
 def soldCallsPuts(tables):
