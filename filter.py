@@ -44,6 +44,13 @@ def toNumber(table,cols):
 def getRowsOfColumnsContainingStr(table, colName:str, pattern:str):
         return table[table[colName].str.contains(pattern, na=False)]
 #--------------------------------------------------------------------------------------------------------------------
+def getRowsOfColumnsMatchingFormula(table, colName:str, pattern:str):
+    print(f"Filter {colName} mit {pattern}")
+    temp = table.copy()
+    temp[colName] = pd.to_numeric(temp[colName], errors='coerce')
+    return table[temp.eval(f"`{colName}` {pattern}")]
+
+#--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
 def addEurUsdToTable(tables,t,sTable:str):
     eu = "USDEUR"
@@ -112,7 +119,8 @@ def tableStocksBuy(tables):
     acc = lng['Aktien']
     name, f, r, n = acc['name'], acc['filterBuy'], acc['renames'], acc['toNumber']
     t = renameCols(tables.get(name),r)
-    t = getRowsOfColumnsContainingStr(t, f["col"], f["val"])
+    #t = getRowsOfColumnsContainingStr(t, f["col"], f["val"])
+    t = getRowsOfColumnsMatchingFormula(t, f["col"], f["val"])
     t = toNumber(t[acc['filters']],n)
     t = addEurUsdToTable(tables, t, 'Aktien')
     p,g,w,m = acc['preis'],acc['gebühr'],'USDEUR',acc['menge']
@@ -125,7 +133,8 @@ def tableStocksSell(tables):
     t = tables.get(name)
     t = renameCols(t,r)
     f = acc['filterSold']
-    t = getRowsOfColumnsContainingStr(t, f["col"], f["val"]).copy()
+    #t = getRowsOfColumnsContainingStr(t, f["col"], f["val"]).copy()
+    t = getRowsOfColumnsMatchingFormula(t, f["col"], f["val"])
     t = t[acc['filters']]
     # suche für jede Transaktion den zugehörigen Euro Umrechnungsfaktor
     # und wandle Erlös und Gebühr nach Euro
@@ -162,13 +171,42 @@ def tableTransactionsOptions(tables):
     return tables.get(lng['Transaktionen']['name'])
 #--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
+class EcbProvider:
+    def __init__(self, csv_path='eurofxref-hist.csv'):
+        self.df = pd.read_csv(csv_path)
+        self.df['Date'] = pd.to_datetime(self.df['Date'])
+        self.df.set_index('Date', inplace=True)
+
+    def get_usd_eur(self, target_date):
+        # EZB-Kurse sind meistens EUR/USD (1 EUR = x USD)
+        # Wir brauchen oft USD -> EUR (1/x)
+        try:
+            # Suche den nächsten verfügbaren Tag (EZB publiziert nicht an Wochenenden)
+            idx = self.df.index.get_indexer([target_date], method='pad')[0]
+            rate_usd = self.df.iloc[idx]['USD']
+            return 1.0 / rate_usd
+        except:
+            return None
+#--------------------------------------------------------------------------------------------------------------------
+def getEcbRate(datetime):
+    ecb = EcbProvider()
+    date_only = pd.to_datetime(datetime).date()
+    rate = ecb.get_usd_eur(pd.to_datetime(date_only))
+    return rate
+#--------------------------------------------------------------------------------------------------------------------
 def findWechselkurs(forexTable,datetime,symbol):
     # suche nach 'Datum/Zeit', 'Menge' und 'Erlös in EUR'
     c = lng['Forex']['time']
     t = forexTable[forexTable[c] == datetime]
-    x = t.head(2)
-    x = x['EUR']/x['USD']
-    return abs(x.iloc[0])
+    if not t.empty:
+        x = t.head(2)
+        x = x['EUR']/x['USD']
+        return abs(x.iloc[0])    
+    # Fallback: EZB-Referenzkurs
+    # Hier müsste eine Funktion aufgerufen werden, die in einer EZB-CSV sucht
+    ezb_kurs = getEcbRate(datetime) 
+    if ezb_kurs:
+        return ezb_kurs
 #--------------------------------------------------------------------------------------------------------------------
 def addEurValuesToOptions(tables,usePositive:bool):
     acc = lng['Transaktionen']

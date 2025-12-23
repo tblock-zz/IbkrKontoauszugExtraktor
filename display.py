@@ -87,11 +87,11 @@ def showBoughtShorts(t,sum=None):
 #--------------------------------------------------------------------------------------------------
 def showExecutedPuts(t):
     showLine()
-    print("Ausgeführte Puts\n" , t.to_string(na_rep='-'))
+    print("Ausgeführte Puts (Aktienzuteilung)\n" , t.to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showExecutedCalls(t):
     showLine()
-    print("Ausgeführte Calls\n", t.to_string(na_rep='-'))
+    print("Ausgeführte Calls (Aktienabnahme)\n", t.to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showExecutedShorts(t):
     print("\nAusgeführte Shorts\n", t.to_string(na_rep='-'))
@@ -108,12 +108,9 @@ def showSoldStocks(t):
 #--------------------------------------------------------------------------------------------------
 def showStocksSellProfit(t):
     showLine()
-    t = t.dropna()
-    t["Menge_Kauf"] *= 100
-    t["Menge_Verkauf"] *= 100
     print("Berechnung Käufe - Verkäufe:\n" ,t.to_string())
     showLine()
-    sum = t['Preis_Differenz'].sum()
+    sum = t['Gewinn_Euro'].sum()
     print("Profit:" ,sum)
 #--------------------------------------------------------------------------------------------------
 def showRemainingStocks(p):

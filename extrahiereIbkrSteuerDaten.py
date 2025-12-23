@@ -12,6 +12,7 @@ import alignCsv as al
 import csvLoader as db
 import filter
 import display as dp
+from collections import deque
 
 import language as lg
 lng = lg.selected
@@ -99,54 +100,143 @@ def fifo_merge(a, b):
     merged_df = pd.DataFrame(merged_list)
     return merged_df
 #--------------------------------------------------------------------------------------------------------------------
-def calculate_profit_loss(a, b):
-    a = a.sort_values(by='Datum/Zeit')
-    b = b.sort_values(by='Datum/Zeit')
-    if globals.debug:
-      print("#" * 80)
-      print(a.to_string())
-      print(b.to_string())
-
-    colsRemove = ['Bis','Gebühr','USDEUR','Preis']
-    a = a.drop(columns=colsRemove, errors='ignore')
-    b = b.drop(columns=colsRemove, errors='ignore')
-    if globals.debug:
-      print("#" * 80)
-      print(a.to_string())
-      print(b.to_string())
-
-    check_quantity(a,b)
-    # Berechne den Kaufpreis pro Aktie
-    b['EkEuro'] = b['EkEuro'] / b['Menge']
-    merged = fifo_merge(a,b)
-
-    #merged = pd.merge(a, b, on=['Symbol'], suffixes=('_Kauf', '_Verkauf'))
-    if globals.debug:
-      print("#" * 80)
-      print(merged.to_string())
-      print("#" * 80)
-    return merged
+def calculateRemaining(p, c):
+    """
+    Korrigierte Version: Verbleibende Aktien nach FIFO.
+    
+    Args:
+        p: DataFrame mit gekauften Aktien (Menge > 0)
+        c: DataFrame mit verkauften Aktien (Menge < 0)
+        
+    Returns:
+        DataFrame mit verbleibenden Aktien-Beständen
+    """
+    # Sortiere beide DataFrames nach Datum
+    p_sorted = p.sort_values(['Symbol', 'Datum/Zeit']).copy()
+    c_sorted = c.sort_values(['Symbol', 'Datum/Zeit']).copy()
+    # Konvertiere Verkaufsmenge zu positiv für Berechnung
+    c_sorted['Menge'] = abs(c_sorted['Menge'])
+    # Erstelle eine Kopie der Käufe für die Verarbeitung
+    remaining_buys = []
+    for symbol in p_sorted['Symbol'].unique():
+        symbol_buys = p_sorted[p_sorted['Symbol'] == symbol].copy()
+        symbol_sells = c_sorted[c_sorted['Symbol'] == symbol].copy()
+        # FIFO: Verkaufe zuerst die ältesten Aktien
+        for _, sell_row in symbol_sells.iterrows():
+            sell_quantity = sell_row['Menge']
+            while sell_quantity > 0 and not symbol_buys.empty:
+                # Nimm den ältesten Kauf
+                oldest_buy = symbol_buys.iloc[0]
+                buy_quantity = oldest_buy['Menge']
+                # Verkaufe die verfügbare Menge
+                quantity_to_sell = min(sell_quantity, buy_quantity)
+                # Reduziere sowohl Kaufs- als auch Verkaufsmenge
+                symbol_buys.at[symbol_buys.index[0], 'Menge'] -= quantity_to_sell
+                sell_quantity -= quantity_to_sell
+                # Entferne komplett verkaufte Käufe
+                if symbol_buys.iloc[0]['Menge'] <= 0:
+                    symbol_buys = symbol_buys.iloc[1:]
+        # Füge verbleibende Käufe zu der Liste hinzu
+        for _, remaining_buy in symbol_buys.iterrows():
+            remaining_buys.append(remaining_buy.to_dict())
+    # Konvertiere zu DataFrame
+    if remaining_buys:
+        result_df = pd.DataFrame(remaining_buys)
+        return result_df.sort_values(['Symbol', 'Datum/Zeit'])
+    else:
+        return pd.DataFrame(columns=p.columns)
 #--------------------------------------------------------------------------------------------------------------------
-def update_stock_quantities(a, b):
-    # Aggregiere die Mengen der Verkäufe nach Symbol
-    b_aggregated = b.groupby('Symbol')['Menge_Verkauf'].sum().reset_index()    
-    # Mergen der Bestands- und Verkaufsdaten basierend auf Symbol
-    merged = pd.merge(a, b_aggregated, on='Symbol', how='left')    
-    # Ersetze NaN in Menge_Verkauf mit 0 (falls ein Symbol in a, aber nicht in b existiert)
-    merged['Menge_Verkauf'] = merged['Menge_Verkauf'].fillna(0)    
-    # Subtrahiere die verkauften Mengen von den Bestandsmengen
-    merged['Menge'] = merged['Menge'] - merged['Menge_Verkauf']
-    # Entferne die Spalte Menge_Verkauf und andere zusätzliche Spalten, die nicht in a vorhanden sind
-    merged = merged[a.columns]
-    return merged
+def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
+    """
+    Berechnet den Gewinn/Verlust aus Aktienverkäufen nach dem deutschen FIFO-Prinzip.
+    
+    Args:
+        p: DataFrame mit Kaufdaten (Spalten: Datum/Zeit, Symbol, Preis, Menge, Gebühr, USDEUR, EkEuro)
+        c: DataFrame mit Verkaufsdaten (Spalten: Datum/Zeit, Symbol, Preis, Menge, Gebühr, USDEUR, EkEuro)
+    
+    Returns:
+        DataFrame mit Verkäufen und berechneten Gewinnen/Verlusten
+    """
+    # Sortiere Käufe nach Datum (FIFO: älteste zuerst)
+    purchases = p.sort_values('Datum/Zeit').copy()
+    sales = c.sort_values('Datum/Zeit').copy()
+    # Erstelle FIFO-Queue pro Symbol für Käufe
+    fifo_queues = {}
+    for _, row in purchases.iterrows():
+        symbol = row['Symbol']
+        if symbol not in fifo_queues:
+            fifo_queues[symbol] = deque()
+        preis_pro_stueck = row['Preis'] * row['USDEUR']  
+        gebuehr_pro_stueck = row['Gebühr'] * row['USDEUR'] / row['Menge'] if row['Menge'] != 0 else 0
+        fifo_queues[symbol].append({
+            'datum': row['Datum/Zeit'],
+            'preis_pro_stueck': preis_pro_stueck,
+            'gebuehr_pro_stueck': gebuehr_pro_stueck,
+            'menge': row['Menge']
+        })
+    # Berechne Gewinn für jeden Verkauf
+    results = []
+    for _, sale in sales.iterrows():
+        symbol = sale['Symbol']
+        verkauf_menge = abs(sale['Menge'])
+        verkauf_erloes_euro = sale['Preis'] * sale['USDEUR'] * verkauf_menge
+        verkauf_gebuehr = abs(sale['Gebühr'] * sale['USDEUR'])
+        if symbol not in fifo_queues or len(fifo_queues[symbol]) == 0:
+            results.append({
+                'Datum/Zeit': sale['Datum/Zeit'],
+                'Symbol': symbol,
+                'Verkauf_Menge': verkauf_menge,
+                'Verkauf_Erlös_Euro': verkauf_erloes_euro,
+                'Anschaffungskosten_Euro': 0,
+                'Gewinn_Euro': verkauf_erloes_euro - verkauf_gebuehr,
+                'Fehler': 'Keine Kaufdaten vorhanden'
+            })
+            continue
+        # FIFO: Verbrauche älteste Käufe zuerst
+        verbleibend = verkauf_menge
+        anschaffungskosten = 0
+        kaufgebuehren = 0
+        while verbleibend > 0 and fifo_queues[symbol]:
+            kauf = fifo_queues[symbol][0]
+            if kauf['menge'] <= verbleibend:
+                # Kompletter Kauf wird verbraucht
+                anschaffungskosten += kauf['menge'] * kauf['preis_pro_stueck']
+                kaufgebuehren += kauf['menge'] * kauf['gebuehr_pro_stueck']
+                verbleibend -= kauf['menge']
+                fifo_queues[symbol].popleft()
+            else:
+                # Teilweise Entnahme aus diesem Kauf
+                anschaffungskosten += verbleibend * kauf['preis_pro_stueck']
+                kaufgebuehren += verbleibend * kauf['gebuehr_pro_stueck']
+                kauf['menge'] -= verbleibend
+                verbleibend = 0
+        # Gewinn = Verkaufserlös - Anschaffungskosten - Kaufgebühren - Verkaufsgebühren
+        gewinn = verkauf_erloes_euro - anschaffungskosten - kaufgebuehren - verkauf_gebuehr
+        results.append({
+            'Datum/Zeit': sale['Datum/Zeit'],
+            'Symbol': symbol,
+            'Verkauf_Menge': verkauf_menge,
+            'Verkauf_Erlös_Euro': verkauf_erloes_euro,
+            'Anschaffungskosten_Euro': anschaffungskosten,
+            'Kaufgebühren_Euro': kaufgebuehren,
+            'Verkaufsgebühr_Euro': verkauf_gebuehr,
+            'Gewinn_Euro': gewinn,
+            'Fehler': 'Nicht genug Kaufdaten' if verbleibend > 0 else None
+        })
+    return pd.DataFrame(results)
 #--------------------------------------------------------------------------------------------------------------------
 def getExecutedShorts(tables):
     t=filter.soldCallsPuts(tables)
-    s=filter.getSumOptions(t)
-    dp.showSoldShorts(t,s)
+    t['Menge'] = t['Menge'].astype(float)*100
+    sC=filter.getSumOptions(t)
+    dp.showSoldShorts(t,sC)
     t=filter.boughtCallsPuts(tables)
-    s=filter.getSumOptions(t)
-    dp.showBoughtShorts(t,s)
+    t['Menge'] = t['Menge'].astype(float)*100
+    sP=filter.getSumOptions(t)
+    dp.showBoughtShorts(t,sP)
+    dp.showLine()
+    print(f"Gewinn aus Optionsgeschäften: {sC} + {sP} = {sC + sP}")
+    dp.showLine()
     executedShorts = filter.executedOptions(tables)
     p = filter.executedPutsCalls(tables,executedShorts,'filterExePuts')
     c = filter.executedPutsCalls(tables,executedShorts,'filterExeCalls')
@@ -165,41 +255,28 @@ def showCorrectedCalculation(tables,filename:str):
         stocksStart = db.loadStockFromYearBefore(filename)
     except:  
         pass
-
     print("\n","!"*80,"\n  todo Kein Steuerdokument und vor Benutzung sorgfältig zu prüfen\n","!"*80)
-    executedShorts,p,c = getExecutedShorts(tables)
-    if globals.debug: dp.showExecutedShorts(executedShorts)
     dp.showStartStocks(stocksStart.sort_values(by='Datum/Zeit')) # todo calculate EkEuro
-    stocksBuy = filter.tableStocksBuy(tables).sort_values(by='Datum/Zeit')
-    dp.showBoughtStocks(stocksBuy)
-    stocksBuy  ["Menge"] /= 100
-    stocksStart["Menge"] /= 100
-    p = p.sort_values(by='Datum/Zeit')
-    dp.showExecutedPuts(p)
+    stocksBuy  = filter.tableStocksBuy(tables).sort_values(by='Datum/Zeit')
     stocksSold = filter.tableStocksSell(tables).sort_values(by='Datum/Zeit')
-    p = filter.merge(stocksStart,p)
-    p = filter.merge(stocksBuy,p)
-    if globals.debug:
-        print("\nAktien gesamt:\n", p.to_string())
-
-    c = c.sort_values(by='Datum/Zeit')
-    dp.showExecutedCalls(c)
+    dp.showBoughtStocks(stocksBuy)
     dp.showSoldStocks(stocksSold)
-    stocksSold ["Menge"] /= -100
-    c = c.drop(columns=["Bis"], errors='ignore')
-    c = filter.merge(stocksSold,c)
-    if globals.debug:
-        print("\nAktien verkauft gesamt:\n", c.to_string())
 
-    t = calculate_profit_loss(p,c)
+    c = stocksSold
+    p = filter.merge(stocksStart, stocksBuy)
+    t = calculateProfit(p,c)
     dp.showStocksSellProfit(t)
-    p=update_stock_quantities(p,t)
-    p = filter.tableRemainingExecutedPuts(p,t)
-    p = p[p["Menge"]>0]
-    p["Menge"] *= 100
-    #y = y.iloc[:, :-1]
-    dp.showRemainingStocks(p)
-    db.saveRemainingStocks("stocksafter.csv", p)    
+    r = calculateRemaining(p,c)
+    dp.showRemainingStocks(r)
+    db.saveRemainingStocks("stocksafter.csv", r)    
+
+    executedShorts,puts,calls = getExecutedShorts(tables)
+
+    if False:
+        puts = puts.sort_values(by='Datum/Zeit')
+        dp.showExecutedPuts(puts)
+        calls = calls.sort_values(by='Datum/Zeit')
+        dp.showExecutedCalls(calls)
 #--------------------------------------------------------------------------------------------------------------------
 def parseArguments():
     parser = argparse.ArgumentParser(description='Lade eine IBKR/CAPTRADER CSV Datei und erstelle Daraus separate Tabellen.')

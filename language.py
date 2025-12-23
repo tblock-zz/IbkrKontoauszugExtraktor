@@ -49,12 +49,12 @@ tableNames = {
             'renames'      : ['T.-Kurs','Preis', 'Prov./Gebühr', 'Gebühr'],
             'filters'      : ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro'],
             'filterSold'   : {
-                "col" :"Code", 
-                "val" : "^C;Ex$|C;P|^C$"
+                "col" :"Menge", 
+                "val" : "<0"
             },
             'filterBuy'   : {
-                "col" :"Code", 
-                "val" : "^O$|O;P"
+                "col" :"Menge", 
+                "val" : ">0"
             },
             'toNumber'     : ['Preis', 'Menge', 'Gebühr','USDEUR'],
             'time'         : 'Datum/Zeit',
