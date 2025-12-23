@@ -3,7 +3,7 @@ Filters the tables for specific information and returns the filterend table.
 '''
 import pandas as pd
 import numpy as np
-
+import globals
 import language as lg
 
 global tables
@@ -45,7 +45,7 @@ def getRowsOfColumnsContainingStr(table, colName:str, pattern:str):
         return table[table[colName].str.contains(pattern, na=False)]
 #--------------------------------------------------------------------------------------------------------------------
 def getRowsOfColumnsMatchingFormula(table, colName:str, pattern:str):
-    print(f"Filter {colName} mit {pattern}")
+    if globals.debug:    print(f"Filter {colName} mit {pattern}")
     temp = table.copy()
     temp[colName] = pd.to_numeric(temp[colName], errors='coerce')
     return table[temp.eval(f"`{colName}` {pattern}")]

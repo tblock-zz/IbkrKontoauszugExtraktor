@@ -85,6 +85,9 @@ def showBoughtShorts(t,sum=None):
         sumStr = lng["idBoughtOptionsSum"]
         print(sumStr,sum)
 #--------------------------------------------------------------------------------------------------
+def showExecutedShorts(t):
+    print("\nAusgeführte Shorts\n", t.to_string(na_rep='-'))
+#--------------------------------------------------------------------------------------------------
 def showExecutedPuts(t):
     showLine()
     print("Ausgeführte Puts (Aktienzuteilung)\n" , t.to_string(na_rep='-'))
@@ -92,9 +95,6 @@ def showExecutedPuts(t):
 def showExecutedCalls(t):
     showLine()
     print("Ausgeführte Calls (Aktienabnahme)\n", t.to_string(na_rep='-'))
-#--------------------------------------------------------------------------------------------------
-def showExecutedShorts(t):
-    print("\nAusgeführte Shorts\n", t.to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showBoughtStocks(t):
     showLine()

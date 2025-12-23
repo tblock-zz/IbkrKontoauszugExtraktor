@@ -1,7 +1,5 @@
 '''
 todos
- move check_quantity,calculate_profit_loss and update_stock_quantities
-   to filter.py
    move prints to display.py
 '''
 import pandas as pd
@@ -13,92 +11,10 @@ import csvLoader as db
 import filter
 import display as dp
 from collections import deque
-
+#--------------------------------------------------------------------------------------------------------------------
 import language as lg
 lng = lg.selected
-
 #--------------------------------------------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------------------------------------------
-def check_quantity(a, b):
-    a_aggregated = a.groupby('Symbol')['Menge'].sum().reset_index()
-    b_aggregated = b.groupby('Symbol')['Menge'].sum().reset_index()   
-    merged = pd.merge(a_aggregated, b_aggregated, on='Symbol', how='left', suffixes=('_a', '_b'))    
-    merged['Menge_b'] = merged['Menge_b'].fillna(0)    
-    merged['invalid'] = merged['Menge_a'] < merged['Menge_b']
-    invalids = merged[merged['invalid']]
-    count = merged['invalid'].sum()
-    if(count>0):
-        print("\n!!! Fehler Anzahl der verkauften Aktien höher als der Bestand für")
-        print(invalids['Symbol'].to_string())
-        print("\n Bestand:\n",a.to_string())
-        print("\n Verkauf:\n",b.to_string())
-        exit()        
-    return count, invalids
-#--------------------------------------------------------------------------------------------------------------------
-def fifo_merge(a, b):
-    # !!!! todo use language strings
-    ltr = lng['Transaktionen']
-    strTime   = ltr['time']
-    strMenge = ltr['menge']
-    strSymbol = ltr['symbol']
-    strEkEuro = 'EkEuro'
-
-    a = a.sort_values(by=strTime)
-    b = b.sort_values(by=strTime)
-    
-    merged_list = []
-
-    for symbol in a[strSymbol].unique():
-        a_symbol = a[a[strSymbol] == symbol].copy()
-        b_symbol = b[b[strSymbol] == symbol].copy()
-        
-        while not a_symbol.empty and not b_symbol.empty:
-            a_row = a_symbol.iloc[0]
-            b_row = b_symbol.iloc[0]
-            
-            menge_kauf = a_row[strMenge]
-            menge_verkauf = b_row[strMenge]
-            
-            menge = min(menge_kauf, menge_verkauf)
-            
-            ek_euro_kauf = a_row['EkEuro'] 
-            ek_euro_verkauf = b_row['EkEuro'] * (menge)
-            
-            merged_list.append({
-                f'{strTime}_Kauf': a_row[strTime],
-                #'Datum/Zeit_Kauf': a_row[strTime],
-                f'{strSymbol}' : symbol,
-                f'{strMenge}_Kauf': menge,
-                f'{strEkEuro}_Kauf': ek_euro_kauf,
-                f'{strTime}_Verkauf': b_row[strTime],
-                f'{strMenge}_Verkauf': menge,
-                f'{strEkEuro}_Verkauf': ek_euro_verkauf,
-                'Preis_Differenz': ek_euro_verkauf + ek_euro_kauf
-            })
-            
-            a_symbol.at[a_symbol.index[0], 'Menge'] -= menge
-            b_symbol.at[b_symbol.index[0], 'Menge'] -= menge
-            
-            if a_symbol.iloc[0]['Menge'] == 0:
-                a_symbol = a_symbol.iloc[1:]
-            if b_symbol.iloc[0]['Menge'] == 0:
-                b_symbol = b_symbol.iloc[1:]
-        
-        # Add remaining rows in a_symbol to merged_list
-        for _, row in a_symbol.iterrows():
-            merged_list.append({
-                f'{strTime}_Kauf': row[strTime],
-                f'{strSymbol}' : symbol,
-                f'{strMenge}_Kauf': row['Menge'],
-                f'{strEkEuro}_Kauf': row['EkEuro'],
-                f'{strTime}_Verkauf': None,
-                f'{strMenge}_Verkauf': None,
-                f'{strEkEuro}_Verkauf': None,
-                'Preis_Differenz': None
-            })
-    
-    merged_df = pd.DataFrame(merged_list)
-    return merged_df
 #--------------------------------------------------------------------------------------------------------------------
 def calculateRemaining(p, c):
     """
@@ -161,65 +77,65 @@ def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
     purchases = p.sort_values('Datum/Zeit').copy()
     sales = c.sort_values('Datum/Zeit').copy()
     # Erstelle FIFO-Queue pro Symbol für Käufe
-    fifo_queues = {}
+    fifoQueues = {}
     for _, row in purchases.iterrows():
         symbol = row['Symbol']
-        if symbol not in fifo_queues:
-            fifo_queues[symbol] = deque()
-        preis_pro_stueck = row['Preis'] * row['USDEUR']  
-        gebuehr_pro_stueck = row['Gebühr'] * row['USDEUR'] / row['Menge'] if row['Menge'] != 0 else 0
-        fifo_queues[symbol].append({
+        if symbol not in fifoQueues:
+            fifoQueues[symbol] = deque()
+        preisProStueck = row['Preis'] * row['USDEUR']  
+        gebuehrProStueck = row['Gebühr'] * row['USDEUR'] / row['Menge'] if row['Menge'] != 0 else 0
+        fifoQueues[symbol].append({
             'datum': row['Datum/Zeit'],
-            'preis_pro_stueck': preis_pro_stueck,
-            'gebuehr_pro_stueck': gebuehr_pro_stueck,
+            'preisProStueck': preisProStueck,
+            'gebuehrProStueck': gebuehrProStueck,
             'menge': row['Menge']
         })
     # Berechne Gewinn für jeden Verkauf
     results = []
     for _, sale in sales.iterrows():
         symbol = sale['Symbol']
-        verkauf_menge = abs(sale['Menge'])
-        verkauf_erloes_euro = sale['Preis'] * sale['USDEUR'] * verkauf_menge
-        verkauf_gebuehr = abs(sale['Gebühr'] * sale['USDEUR'])
-        if symbol not in fifo_queues or len(fifo_queues[symbol]) == 0:
+        verkaufMenge = abs(sale['Menge'])
+        verkaufErloesEuro = sale['Preis'] * sale['USDEUR'] * verkaufMenge
+        verkaufGebuehr = abs(sale['Gebühr'] * sale['USDEUR'])
+        if symbol not in fifoQueues or len(fifoQueues[symbol]) == 0:
             results.append({
                 'Datum/Zeit': sale['Datum/Zeit'],
                 'Symbol': symbol,
-                'Verkauf_Menge': verkauf_menge,
-                'Verkauf_Erlös_Euro': verkauf_erloes_euro,
+                'verkaufMenge': verkaufMenge,
+                'Verkauf_Erlös_Euro': verkaufErloesEuro,
                 'Anschaffungskosten_Euro': 0,
-                'Gewinn_Euro': verkauf_erloes_euro - verkauf_gebuehr,
+                'Gewinn_Euro': verkaufErloesEuro - verkaufGebuehr,
                 'Fehler': 'Keine Kaufdaten vorhanden'
             })
             continue
         # FIFO: Verbrauche älteste Käufe zuerst
-        verbleibend = verkauf_menge
+        verbleibend = verkaufMenge
         anschaffungskosten = 0
         kaufgebuehren = 0
-        while verbleibend > 0 and fifo_queues[symbol]:
-            kauf = fifo_queues[symbol][0]
+        while verbleibend > 0 and fifoQueues[symbol]:
+            kauf = fifoQueues[symbol][0]
             if kauf['menge'] <= verbleibend:
                 # Kompletter Kauf wird verbraucht
-                anschaffungskosten += kauf['menge'] * kauf['preis_pro_stueck']
-                kaufgebuehren += kauf['menge'] * kauf['gebuehr_pro_stueck']
+                anschaffungskosten += kauf['menge'] * kauf['preisProStueck']
+                kaufgebuehren += kauf['menge'] * kauf['gebuehrProStueck']
                 verbleibend -= kauf['menge']
-                fifo_queues[symbol].popleft()
+                fifoQueues[symbol].popleft()
             else:
                 # Teilweise Entnahme aus diesem Kauf
-                anschaffungskosten += verbleibend * kauf['preis_pro_stueck']
-                kaufgebuehren += verbleibend * kauf['gebuehr_pro_stueck']
+                anschaffungskosten += verbleibend * kauf['preisProStueck']
+                kaufgebuehren += verbleibend * kauf['gebuehrProStueck']
                 kauf['menge'] -= verbleibend
                 verbleibend = 0
         # Gewinn = Verkaufserlös - Anschaffungskosten - Kaufgebühren - Verkaufsgebühren
-        gewinn = verkauf_erloes_euro - anschaffungskosten - kaufgebuehren - verkauf_gebuehr
+        gewinn = verkaufErloesEuro - anschaffungskosten - kaufgebuehren - verkaufGebuehr
         results.append({
             'Datum/Zeit': sale['Datum/Zeit'],
             'Symbol': symbol,
-            'Verkauf_Menge': verkauf_menge,
-            'Verkauf_Erlös_Euro': verkauf_erloes_euro,
+            'verkaufMenge': verkaufMenge,
+            'Verkauf_Erlös_Euro': verkaufErloesEuro,
             'Anschaffungskosten_Euro': anschaffungskosten,
             'Kaufgebühren_Euro': kaufgebuehren,
-            'Verkaufsgebühr_Euro': verkauf_gebuehr,
+            'Verkaufsgebühr_Euro': verkaufGebuehr,
             'Gewinn_Euro': gewinn,
             'Fehler': 'Nicht genug Kaufdaten' if verbleibend > 0 else None
         })
@@ -261,7 +177,7 @@ def showCorrectedCalculation(tables,filename:str):
     stocksSold = filter.tableStocksSell(tables).sort_values(by='Datum/Zeit')
     dp.showBoughtStocks(stocksBuy)
     dp.showSoldStocks(stocksSold)
-
+    #------------------------------------------------------
     c = stocksSold
     p = filter.merge(stocksStart, stocksBuy)
     t = calculateProfit(p,c)
@@ -269,9 +185,8 @@ def showCorrectedCalculation(tables,filename:str):
     r = calculateRemaining(p,c)
     dp.showRemainingStocks(r)
     db.saveRemainingStocks("stocksafter.csv", r)    
-
+    #------------------------------------------------------
     executedShorts,puts,calls = getExecutedShorts(tables)
-
     if False:
         puts = puts.sort_values(by='Datum/Zeit')
         dp.showExecutedPuts(puts)
@@ -302,7 +217,6 @@ def main():
     if args.align:
         al.alignSeparators(args.file_path, args.align, args.encoding)
         filename = args.align
-
     tables = db.CSVTableProcessor(filename, delimiter=args.delimiter, decimal=args.decimal, encoding=args.encoding).getTables()
     #filter.setTables(tables)
     if args.list:
@@ -311,7 +225,6 @@ def main():
         for idx, table in enumerate(availableTables, start=1): print(f"  {idx}: '{table}'")
     if args.table:
         dp.showSpecificTable(tables,args.table,args.columns)
-
     if args.tax:
         showTaxRelevantTables(tables)
     if args.new:

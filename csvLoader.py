@@ -30,7 +30,6 @@ class CSVTableProcessor:
         tables = {}
         current_table_name = None
         current_table_data = []
-
         for index, row in self.data.iterrows():
             table_name = row.iloc[0]
             row_type   = row.iloc[1]
@@ -49,7 +48,6 @@ class CSVTableProcessor:
         # Speichern der letzten Tabelle
         if current_table_name is not None and current_table_data:
             tables[current_table_name] = pd.DataFrame(current_table_data[1:], columns=current_table_data[0])
-
         return tables
     #-------------------------------------------------------------------------------------------------
     def handleHeaderTransaktionen(self,row,index):
