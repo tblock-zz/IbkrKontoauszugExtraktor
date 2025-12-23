@@ -18,6 +18,14 @@ python extrahiereIbkrSteuerDaten.py <Pfad/Dateiname_der_CSV_Kontoauszugsdatei> -
 ```
 Am Ende dieses Prozesses wird die Datei `stocksafter.csv` erstellt. Sie enthält die Übersicht der Aktien, die nach allen Transaktionen noch im Bestand sind. Diese Datei nutzt dasselbe Format wie die ursprüngliche Datei.
 
+### Export
+Mit der Option `--csv <Dateiname>` können die extrahierten Daten in eine Datei exportiert werden. Dabei wird das Format automatisch anhand der Dateiendung gewählt:
+- **.csv**: Erstellt eine einfache CSV-Datei mit den Detaildaten.
+- **.ods**: Erstellt ein Open Document Spreadsheet (z.B. für LibreOffice oder Excel). Dieses enthält mehrere formatierte Arbeitsblätter:
+  - **Steuer Übersicht**: Eine Zusammenfassung der Gewinne und Verluste (Aktien FIFO, Optionen, Dividenden, Zinsen).
+  - **Aktien**: Detaillierte FIFO-Berechnung der Aktiengeschäfte.
+  - **Optionen**: Detaillierte Auflistung der Optionsgeschäfte (Stillhaltergeschäfte und Käufe).
+
 ## Beispiel: Neues Konto ab 2023 bei Captrader
 1. Laden Sie den Captrader-Auszug für 2023 (`CaptraderDateiName.csv`) von Ihrem Konto herunter.
 2. Benennen Sie die Datei `stocksbefore.csv` in `stocksbefore2023.csv` um und führen Sie das Skript aus:
