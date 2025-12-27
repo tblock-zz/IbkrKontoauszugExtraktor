@@ -1,24 +1,24 @@
 
-# IbkrKontoauszugExtraktor
+# IbkrKontoauszugExtraktor für 2025 und davor
 
 ## Disclaimer
-Bitte beachten Sie, dass dieses Programm und die daraus resultierenden Daten nicht geprüft sind. Es wird daher keine Garantie für die Richtigkeit der Ausgaben übernommen. Eine Überprüfung der Ausgaben ist unerlässlich. Bei Bedarf konsultieren Sie bitte Ihren Steuerberater.
+Bitte beachten Sie, dass dieses Programm und die daraus resultierenden Daten nicht geprüft sind. Dies ist keine Steuerberatung. Es wird daher keine Garantie für die Richtigkeit der Ausgaben übernommen. Eine Überprüfung der Ausgaben ist unerlässlich. Bei Bedarf konsultieren Sie bitte Ihren Steuerberater.
 
-## Captrader/IBKR Kontoauszug CSV-Extraktor
-Dieses Python-Skript ermöglicht es, einzelne Tabellen aus den Kontoauszügen von Captrader bzw. IBKR effizient zu extrahieren.
+## Captrader/IBKR Kontoauszug CSV-Extraktor  
+Dieses Python-Skript ermöglicht es, einzelne Tabellen aus den Kontoauszügen von Captrader bzw. IBKR effizient zu extrahieren und Berechnungen nach dem Fifo Prinzip mit USD.EUR Umrechnung vorzunehmen.
 
 ### Anwendung
 Führen Sie das Skript mit dem folgenden Befehl aus:
 ```bash
 python extrahiereIbkrSteuerDaten.py <Pfad/Dateiname_der_CSV_Kontoauszugsdatei> --align converted --tax --new <Dateiname_vorhandener_Aktien>
 ```
-Hierbei ist `--new` gefolgt vom Dateinamen, in dem alle Aktien aufgeführt sind, die bereits vor den Transaktionen im neuen Captrader CSV-Dokument vorhanden waren. Ein praktisches Beispiel hierfür ist:
+Hierbei ist `--new` gefolgt vom Dateinamen, in dem alle Aktien mir Einstandskursen, mit Datum und USD.EUR Kurs aufgeführt sind, die bereits vor den Transaktionen im neuen Captrader CSV-Dokument vorhanden waren. Ein praktisches Beispiel hierfür ist:
 ```bash
-python extrahiereIbkrSteuerDaten.py <Pfad/Dateiname_der_CSV_Kontoauszugsdatei> --align converted --tax --new stocksbefore.csv
+python extrahiereIbkrSteuerDaten.py Captrader2025.csv --align converted --tax --new stocksbefore.csv
 ```
 Am Ende dieses Prozesses wird die Datei `stocksafter.csv` erstellt. Sie enthält die Übersicht der Aktien, die nach allen Transaktionen noch im Bestand sind. Diese Datei nutzt dasselbe Format wie die ursprüngliche Datei.
 
-### Export
+### Export 
 Mit der Option `--csv <Dateiname>` können die extrahierten Daten in eine Datei exportiert werden. Dabei wird das Format automatisch anhand der Dateiendung gewählt:
 - **.csv**: Erstellt eine einfache CSV-Datei mit den Detaildaten.
 - **.ods**: Erstellt ein Open Document Spreadsheet (z.B. für LibreOffice oder Excel). Dieses enthält mehrere formatierte Arbeitsblätter:
@@ -28,7 +28,7 @@ Mit der Option `--csv <Dateiname>` können die extrahierten Daten in eine Datei 
 
 ## Beispiel: Neues Konto ab 2023 bei Captrader
 1. Laden Sie den Captrader-Auszug für 2023 (`CaptraderDateiName.csv`) von Ihrem Konto herunter.
-2. Benennen Sie die Datei `stocksbefore.csv` in `stocksbefore2023.csv` um und führen Sie das Skript aus:
+2. Benennen Sie die Datei `stocksbefore.csv` die alle noch vorhandenen Aktien vor 2023 enthält in `stocksbefore2023.csv` um und führen Sie das Skript aus:
    ```bash
    python extrahiereIbkrSteuerDaten.py CaptraderDateiName.csv --align Captrader2023.csv --tax --new stocksbefore2023.csv
    ```
