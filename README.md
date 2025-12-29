@@ -55,17 +55,17 @@ Nach dem Klonen des Repositories führen Sie den folgenden Befehl aus:
 ```bash
 pip install -r requirements.txt
 ```
+Laden sie bitte ausserdem die "Time series zip" Datei von [csv.zip](https://www.ecb.europa.eu/stats/policy_and_exchange_rates/euro_reference_exchange_rates/html/index.en.html) und entpacken Sie sie im Hauptverzeichnis. Aktuell ist der Link darauf https://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip?361f54415fafb3525e29424934d71ec7.
 
 Open todo's:  
-- sortieren nach Datum
+- sortierte Ausgabe
 
 ## Anhang
-In Deutschland gilt das FIFO Prinzip.
+In Deutschland gilt das FIFO Prinzip, das heißt die zuerst erworbenen Aktien werden wieder verkauft.
 
-- Kauf Dollar am Datum_usd zum Kurs usdeur_kauf
-- Kaufs einer Aktie
-  - Datum_ek, Anzahl_ek, Kurs Dollar_ek, usdeur_ek
-- Verkauf einer Aktie
-  - Datum_vk, Kurs Dollar_vk, Kurs usdeur_vk
-- Berechnung:
-  - Einfach: Gewinn = Anzahl*(usdeur_vk - usdeur_ek)
+| Kategorie | Berechnungsmethode | Besonderheit |
+| :--- | :--- | :--- |
+| **Aktienverkäufe** | (Verkaufspreis in € - Gebühren in €) - (Kaufpreis in € + Gebühren in €) | Währungsgewinne sind hier im Kursgewinn enthalten. |
+| **Optionen (Stillhalter)** | Einnahme (Prämie) in € - Glattstellung/Rückkauf in € - Gebühren in € | Verluste aus Optionen sind vollumfänglich verrechenbar. |
+| **Dividenden & Zinsen** | Brutto-Einnahme in € zum Zufluss
+

@@ -46,7 +46,9 @@ tableNames = {
         } ,
         "Aktien" : {            
             'name'    : 'Transaktionen Aktien', 
+            #                 vorher   , nachher usw.
             'renames'      : ['T.-Kurs','Preis', 'Prov./Gebühr', 'Gebühr'],
+            # filter after renaming
             'filters'      : ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro'],
             'filterSold'   : {
                 "col" :"Menge", 
