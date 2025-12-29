@@ -47,9 +47,9 @@ tableNames = {
         "Aktien" : {            
             'name'    : 'Transaktionen Aktien', 
             #                 vorher   , nachher usw.
-            'renames'      : ['T.-Kurs','Preis', 'Prov./Gebühr', 'Gebühr'],
+            'renames'      : ['T.-Kurs','Preis [USD]', 'Prov./Gebühr', 'Gebühr [USD]'],
             # filter after renaming
-            'filters'      : ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro'],
+            'filters'      : ['Datum/Zeit', 'Symbol', 'Preis [USD]', 'Menge', 'Gebühr [USD]', 'USDEUR', 'EkEuro'],
             'filterSold'   : {
                 "col" :"Menge", 
                 "val" : "<0"
@@ -58,11 +58,11 @@ tableNames = {
                 "col" :"Menge", 
                 "val" : ">0"
             },
-            'toNumber'     : ['Preis', 'Menge', 'Gebühr','USDEUR'],
+            'toNumber'     : ['Preis [USD]', 'Menge', 'Gebühr [USD]','USDEUR'],
             'time'         : 'Datum/Zeit',
-            'preis'        : 'Preis',
+            'preis'        : 'Preis [USD]',
             'menge'        : 'Menge',
-            'gebühr'       : 'Gebühr',
+            'gebühr'       : 'Gebühr [USD]',
         },
         "Forex" : {            
             'name'    : 'Forex-G&V-Details', 

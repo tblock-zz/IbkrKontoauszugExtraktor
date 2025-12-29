@@ -110,7 +110,7 @@ def showStocksSellProfit(t):
     showLine()
     print("Berechnung Käufe - Verkäufe:\n" ,t.to_string())
     showLine()
-    sum = t['Gewinn_Euro'].sum()
+    sum = t['Gewinn [€]'].sum()
     print("Profit:" ,sum)
 #--------------------------------------------------------------------------------------------------
 def showRemainingStocks(p):

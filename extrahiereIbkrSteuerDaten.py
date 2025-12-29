@@ -75,38 +75,49 @@ def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
     Returns:
         DataFrame mit Verkäufen und berechneten Gewinnen/Verlusten
     """
+    cols = lng['Aktien']
+    cTime = cols['time']
+    cSymbol = cols['symbol'] if 'symbol' in cols else 'Symbol' # Fallback or add to language.py if needed, currently 'Symbol' is in filters but not as key
+    # In language.py for 'Aktien': 'filters': ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro']
+    # We can map by index if they are stable or better by name strings
+    # But user asked to use names from filters
+    # filters = ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro']
+    #             0             1         2        3        4         5         6
+    f = cols['filters']
+    cTime, cSymbol, cPreis, cMenge, cGebuehr, cUsdEur, cEkEuro = f[0], f[1], f[2], f[3], f[4], f[5], f[6]
+
     # Sortiere Käufe nach Datum (FIFO: älteste zuerst)
-    purchases = p.sort_values('Datum/Zeit').copy()
-    sales = c.sort_values('Datum/Zeit').copy()
+    purchases = p.sort_values(cTime).copy()
+    sales = c.sort_values(cTime).copy()
     # Erstelle FIFO-Queue pro Symbol für Käufe
     fifoQueues = {}
     for _, row in purchases.iterrows():
-        symbol = row['Symbol']
+        symbol = row[cSymbol]
         if symbol not in fifoQueues:
             fifoQueues[symbol] = deque()
-        preisProStueck = row['Preis'] * row['USDEUR']  
-        gebuehrProStueck = row['Gebühr'] * row['USDEUR'] / row['Menge'] if row['Menge'] != 0 else 0
+        preisProStueck = row[cPreis] * row[cUsdEur]  
+        gebuehrProStueck = row[cGebuehr] * row[cUsdEur] / row[cMenge] if row[cMenge] != 0 else 0
         fifoQueues[symbol].append({
-            'datum': row['Datum/Zeit'],
+            'datum': row[cTime],
             'preisProStueck': preisProStueck,
             'gebuehrProStueck': gebuehrProStueck,
-            'menge': row['Menge']
+            'menge': row[cMenge]
         })
     # Berechne Gewinn für jeden Verkauf
     results = []
     for _, sale in sales.iterrows():
-        symbol = sale['Symbol']
-        verkaufMenge = abs(sale['Menge'])
-        verkaufErloesEuro = sale['Preis'] * sale['USDEUR'] * verkaufMenge
-        verkaufGebuehr = abs(sale['Gebühr'] * sale['USDEUR'])
+        symbol = sale[cSymbol]
+        verkaufMenge = abs(sale[cMenge])
+        verkaufErloesEuro = sale[cPreis] * sale[cUsdEur] * verkaufMenge
+        verkaufGebuehr = abs(sale[cGebuehr] * sale[cUsdEur])
         if symbol not in fifoQueues or len(fifoQueues[symbol]) == 0:
             results.append({
-                'Datum/Zeit': sale['Datum/Zeit'],
-                'Symbol': symbol,
-                'verkaufMenge': verkaufMenge,
-                'Verkauf_Erlös_Euro': verkaufErloesEuro,
-                'Anschaffungskosten_Euro': 0,
-                'Gewinn_Euro': verkaufErloesEuro - verkaufGebuehr,
+                cTime: sale[cTime],
+                cSymbol: symbol,
+                'Verkauf Menge': verkaufMenge,
+                'Verkauf Erlös [€]': verkaufErloesEuro,
+                'Anschaffungskosten [€]': 0,
+                'Gewinn [€]': verkaufErloesEuro - verkaufGebuehr,
                 'Fehler': 'Keine Kaufdaten vorhanden'
             })
             continue
@@ -131,14 +142,14 @@ def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
         # Gewinn = Verkaufserlös - Anschaffungskosten - Kaufgebühren - Verkaufsgebühren
         gewinn = verkaufErloesEuro - anschaffungskosten - kaufgebuehren - verkaufGebuehr
         results.append({
-            'Datum/Zeit': sale['Datum/Zeit'],
-            'Symbol': symbol,
-            'verkaufMenge': verkaufMenge,
-            'Verkauf_Erlös_Euro': verkaufErloesEuro,
-            'Anschaffungskosten_Euro': anschaffungskosten,
-            'Kaufgebühren_Euro': kaufgebuehren,
-            'Verkaufsgebühr_Euro': verkaufGebuehr,
-            'Gewinn_Euro': gewinn,
+            cTime: sale[cTime],
+            cSymbol: symbol,
+            'Verkauf Menge': verkaufMenge,
+            'Verkauf Erlös [€]': verkaufErloesEuro,
+            'Anschaffungskosten [€]': anschaffungskosten,
+            'Kaufgebühren [€]': kaufgebuehren,
+            'Verkaufsgebühr [€]': verkaufGebuehr,
+            'Gewinn [€]': gewinn,
             'Fehler': 'Nicht genug Kaufdaten' if verbleibend > 0 else None
         })
     return pd.DataFrame(results)
@@ -214,7 +225,7 @@ def showCorrectedCalculation(tables,filename:str, exportFile:str=None):
     #------------------------------------------------------
     if exportFile:
          # Calculate sums for export
-         profitStocks = t['Gewinn_Euro'].sum()
+         profitStocks = t['Gewinn [€]'].sum()
          sumSoldOpts = filter.getSumOptions(sold)
          sumBoughtOpts = filter.getSumOptions(bought)
          totalOptProfit = sumSoldOpts + sumBoughtOpts
