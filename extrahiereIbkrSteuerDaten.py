@@ -29,30 +29,33 @@ def calculateRemaining(p, c):
     Returns:
         DataFrame mit verbleibenden Aktien-Beständen
     """
+    cols = lng['Aktien']
+    cTime, cMenge, cSymbol = cols['time'], cols['menge'], cols['symbol']
+
     # Sortiere beide DataFrames nach Datum
-    p_sorted = p.sort_values(['Symbol', 'Datum/Zeit']).copy()
-    c_sorted = c.sort_values(['Symbol', 'Datum/Zeit']).copy()
+    p_sorted = p.sort_values([cSymbol, cTime]).copy()
+    c_sorted = c.sort_values([cSymbol, cTime]).copy()
     # Konvertiere Verkaufsmenge zu positiv für Berechnung
-    c_sorted['Menge'] = abs(c_sorted['Menge'])
+    c_sorted[cMenge] = abs(c_sorted[cMenge])
     # Erstelle eine Kopie der Käufe für die Verarbeitung
     remaining_buys = []
-    for symbol in p_sorted['Symbol'].unique():
-        symbol_buys = p_sorted[p_sorted['Symbol'] == symbol].copy()
-        symbol_sells = c_sorted[c_sorted['Symbol'] == symbol].copy()
+    for symbol in p_sorted[cSymbol].unique():
+        symbol_buys = p_sorted[p_sorted[cSymbol] == symbol].copy()
+        symbol_sells = c_sorted[c_sorted[cSymbol] == symbol].copy()
         # FIFO: Verkaufe zuerst die ältesten Aktien
         for _, sell_row in symbol_sells.iterrows():
-            sell_quantity = sell_row['Menge']
+            sell_quantity = sell_row[cMenge]
             while sell_quantity > 0 and not symbol_buys.empty:
                 # Nimm den ältesten Kauf
                 oldest_buy = symbol_buys.iloc[0]
-                buy_quantity = oldest_buy['Menge']
+                buy_quantity = oldest_buy[cMenge]
                 # Verkaufe die verfügbare Menge
                 quantity_to_sell = min(sell_quantity, buy_quantity)
                 # Reduziere sowohl Kaufs- als auch Verkaufsmenge
-                symbol_buys.at[symbol_buys.index[0], 'Menge'] -= quantity_to_sell
+                symbol_buys.at[symbol_buys.index[0], cMenge] -= quantity_to_sell
                 sell_quantity -= quantity_to_sell
                 # Entferne komplett verkaufte Käufe
-                if symbol_buys.iloc[0]['Menge'] <= 0:
+                if symbol_buys.iloc[0][cMenge] <= 0:
                     symbol_buys = symbol_buys.iloc[1:]
         # Füge verbleibende Käufe zu der Liste hinzu
         for _, remaining_buy in symbol_buys.iterrows():
@@ -60,7 +63,7 @@ def calculateRemaining(p, c):
     # Konvertiere zu DataFrame
     if remaining_buys:
         result_df = pd.DataFrame(remaining_buys)
-        return result_df.sort_values(['Symbol', 'Datum/Zeit'])
+        return result_df.sort_values([cSymbol, cTime])
     else:
         return pd.DataFrame(columns=p.columns)
 #--------------------------------------------------------------------------------------------------------------------
@@ -76,15 +79,15 @@ def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
         DataFrame mit Verkäufen und berechneten Gewinnen/Verlusten
     """
     cols = lng['Aktien']
-    cTime = cols['time']
-    cSymbol = cols['symbol'] if 'symbol' in cols else 'Symbol' # Fallback or add to language.py if needed, currently 'Symbol' is in filters but not as key
+    cSymbol, cTime, cPreis, cMenge, cGebuehr = cols['symbol'], cols['time'], cols['preis'], cols['menge'], cols['gebühr']
+    cSymbol = cols['symbol'] if 'symbol' in cols else cSymbol # Fallback or add to language.py if needed, currently 'Symbol' is in filters but not as key
     # In language.py for 'Aktien': 'filters': ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro']
     # We can map by index if they are stable or better by name strings
     # But user asked to use names from filters
     # filters = ['Datum/Zeit', 'Symbol', 'Preis', 'Menge', 'Gebühr', 'USDEUR', 'EkEuro']
     #             0             1         2        3        4         5         6
     f = cols['filters']
-    cTime, cSymbol, cPreis, cMenge, cGebuehr, cUsdEur, cEkEuro = f[0], f[1], f[2], f[3], f[4], f[5], f[6]
+    cUsdEur, cEkEuro = f[5], f[6]
 
     # Sortiere Käufe nach Datum (FIFO: älteste zuerst)
     purchases = p.sort_values(cTime).copy()
@@ -155,13 +158,14 @@ def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(results)
 #--------------------------------------------------------------------------------------------------------------------
 def getExecutedShorts(tables):
+    cMenge = lng['Aktien']['menge']
     soldOpts=filter.soldCallsPuts(tables)
-    soldOpts['Menge'] = soldOpts['Menge'].astype(float)*100
+    soldOpts[cMenge] = soldOpts[cMenge].astype(float)*100
     sC=filter.getSumOptions(soldOpts)
     dp.showSoldShorts(soldOpts,sC)
     
     boughtOpts=filter.boughtCallsPuts(tables)
-    boughtOpts['Menge'] = boughtOpts['Menge'].astype(float)*100
+    boughtOpts[cMenge] = boughtOpts[cMenge].astype(float)*100
     sP=filter.getSumOptions(boughtOpts)
     dp.showBoughtShorts(boughtOpts,sP)
     
@@ -252,7 +256,7 @@ def showCorrectedCalculation(tables,filename:str, exportFile:str=None):
              "Dividenden (Gesamt)": sumDiv,
              "Quellensteuer (Gesamt)": sumQuellen,
              " ": "", # Spacer
-             "Gewinn/Verlust Aktien (FIFO)": profitStocks,
+             "Gewinn/Verlust Aktien": profitStocks,
              "Gewinn/Verlust Optionen": totalOptProfit,
              "  ": "",
              "Details:": "Details siehe weitere Arbeitsblätter"
@@ -273,7 +277,7 @@ def showCorrectedCalculation(tables,filename:str, exportFile:str=None):
 
          # 2. Aktien Sheet
          sheetStocks = [
-             "Aktien Handel (FIFO)",
+             "Aktien Handel",
              "Startbestand", stocksStart,
              "Käufe", stocksBuy,
              "Verkäufe", stocksSold,
@@ -309,12 +313,12 @@ def showCorrectedCalculation(tables,filename:str, exportFile:str=None):
          else:
              # Fallback to single sheet/CSV-like dump
              exportData = {
-                 "Aktien Beginn": stocksStart,
+                 "Aktien Steuerjahr Beginn": stocksStart,
                  "Aktien gekauft": stocksBuy,
                  "Aktien verkauft": stocksSold,
                  "Berechnung Käufe - Verkäufe": t,
                  "Profit Aktien": profitStocks,
-                 "Aktienbestand Ende": r,
+                 "Aktienbestand Steuerjahr Ende": r,
                  "Verkaufte Optionen": sold,
                  "Summe Einnahmen Optionen": sumSoldOpts,
                  "Gekaufte Optionen": bought,

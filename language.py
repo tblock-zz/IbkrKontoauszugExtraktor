@@ -9,12 +9,12 @@ tableNames = {
         # short name, list name, used cols, to delete cols
         "Transaktionen" : {            
             'name'    : 'Transaktionen Aktien- und Indexoptionen', # tabellenname
-            'renames'             : ['Prov./Gebühr', 'Gebühr', 'Erlös', 'Preis'],
-            'filters'             : ['Symbol', 'Datum/Zeit', 'Menge', 'Preis', 'Gebühr', 'USDEUR', 'EkEuro', 'Code'],
-            'toNumber'            : ['Preis', 'Gebühr'],
+            'renames'             : ['Prov./Gebühr', 'Gebühr [USD]', 'Erlös', 'Preis [USD]'],
+            'filters'             : ['Symbol', 'Datum/Zeit', 'Menge', 'Preis [USD]', 'Gebühr [USD]', 'USDEUR', 'EkEuro', 'Code'],
+            'toNumber'            : ['Preis [USD]', 'Gebühr [USD]'],
             'colsSum'             : ['EkEuro'],
-            'splits'              : ['Symbol', 'Bis', 'Preis', 'Typ'],
-            'filterExecutedShorts': ["Datum/Zeit", 'Symbol', 'Bis', 'Preis', 'Menge', 'Gebühr','USDEUR', 'EkEuro'],
+            'splits'              : ['Symbol', 'Bis', 'Preis [USD]', 'Typ'],
+            'filterExecutedShorts': ["Datum/Zeit", 'Symbol', 'Bis', 'Preis [USD]', 'Menge', 'Gebühr [USD]','USDEUR', 'EkEuro'],
             'filterSoldOptions'   : {
                 "col" :"Code", 
                 "val" : "^[OC]$"
@@ -38,8 +38,8 @@ tableNames = {
             'symbol'              : 'Symbol',
             'time'                : 'Datum/Zeit',
             'bis'                 : 'Bis',
-            'erlös'               : 'Preis',
-            'gebühr'              : 'Gebühr',
+            'erlös'               : 'Preis [USD]',
+            'gebühr'              : 'Gebühr [USD]',
             'menge'               : 'Menge',
             'gewinn'              : 'Gewinn',
             'verlust'             : 'Verlust',
@@ -59,6 +59,7 @@ tableNames = {
                 "val" : ">0"
             },
             'toNumber'     : ['Preis [USD]', 'Menge', 'Gebühr [USD]','USDEUR'],
+            'symbol'       : 'Symbol',
             'time'         : 'Datum/Zeit',
             'preis'        : 'Preis [USD]',
             'menge'        : 'Menge',

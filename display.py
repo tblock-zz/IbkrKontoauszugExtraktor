@@ -4,6 +4,15 @@ import language as lg
 
 lng = lg.selected
 #--------------------------------------------------------------------------------------------------
+def makePositive(df: pd.DataFrame) -> pd.DataFrame:
+    if df is None: return None
+    t = df.copy()
+    numeric_cols = t.select_dtypes(include=['number']).columns
+    for col in numeric_cols:
+        if col != 'Gewinn [€]':
+            t[col] = t[col].abs()
+    return t
+#--------------------------------------------------------------------------------------------------
 def copyAllRows(frm, to):
     # Übertragen der Spalten "Symbol" und "Menge" von Tabelle a zu Spalten "a" und "b" in Tabelle x
     neue_daten = pd.DataFrame({
@@ -20,15 +29,17 @@ def showTables(tables):
     """Zeigt alle Tabellen an."""
     for name, table in tables.items():
         print(f"Tabelle: {name}")
-        print(table)
+        print(makePositive(table))
         print("\n")
 #--------------------------------------------------------------------------------------------------
 def showTableFiltered(t, name, col:str=None, filter:str = None):
     print(f"Tabelle: {name}")
     try:
+      t = makePositive(t)
       print(t[t[col] == filter])
     except:    
       try:
+        t = makePositive(t)
         print(t.to_string(na_rep='-'))  # Gibt die gefilterte Tabelle aus, ohne Kürzungen
       except:
         print("nicht verfügbar")    
@@ -52,7 +63,7 @@ def showSpecificTable(tables, tableName:str,columns):
             end_col = int(col_range[1]) + 1
             table = table.iloc[:, start_col:end_col]
         print(f"Tabelle: {tableName}")
-        print(table.to_string())
+        print(makePositive(table).to_string())
     except:
         print(f"Tabelle '{tableName}' nicht gefunden.")
 #--------------------------------------------------------------------------------------------------------------------
@@ -65,12 +76,12 @@ def showTableColumn(prefix,table, frm, to):
 def showStartStocks(t):
     showLine()
     showLine()
-    print("Aktien Beginn:\n", t)
+    print("Aktien Beginn:\n", makePositive(t))
 #--------------------------------------------------------------------------------------------------------------------
 def showSoldShorts(t,sum=None):
     showLine()
     st = lng["idSoldOptions"]
-    print(f"{st}\n", t.to_string(na_rep='-'))
+    print(f"{st}\n", makePositive(t).to_string(na_rep='-'))
     if not sum is None:
         showLine()
         sumStr = lng["idSoldOptionsSum"]
@@ -79,45 +90,45 @@ def showSoldShorts(t,sum=None):
 def showBoughtShorts(t,sum=None):
     showLine()
     st = lng["idBoughtOptions"]
-    print(f"{st}\n", t.to_string(na_rep='-'))
+    print(f"{st}\n", makePositive(t).to_string(na_rep='-'))
     if not sum is None:
         showLine()
         sumStr = lng["idBoughtOptionsSum"]
         print(sumStr,sum)
 #--------------------------------------------------------------------------------------------------
 def showExecutedShorts(t):
-    print("\nAusgeführte Shorts\n", t.to_string(na_rep='-'))
+    print("\nAusgeführte Shorts\n", makePositive(t).to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showExecutedPuts(t):
     showLine()
-    print("Ausgeführte Puts (Aktienzuteilung)\n" , t.to_string(na_rep='-'))
+    print("Ausgeführte Puts (Aktienzuteilung)\n" , makePositive(t).to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showExecutedCalls(t):
     showLine()
-    print("Ausgeführte Calls (Aktienabnahme)\n", t.to_string(na_rep='-'))
+    print("Ausgeführte Calls (Aktienabnahme)\n", makePositive(t).to_string(na_rep='-'))
 #--------------------------------------------------------------------------------------------------
 def showBoughtStocks(t):
     showLine()
     s = lng["idBoughtStocks"]
-    print(s+"\n", t)
+    print(s+"\n", makePositive(t))
 #--------------------------------------------------------------------------------------------------
 def showSoldStocks(t):
     showLine()
     s = lng["idSoldStocks"]
-    print(s+"\n", t)
+    print(s+"\n", makePositive(t))
 #--------------------------------------------------------------------------------------------------
 def showStocksSellProfit(t):
     showLine()
-    print("Berechnung Käufe - Verkäufe:\n" ,t.to_string())
+    print("Berechnung Käufe - Verkäufe:\n" ,makePositive(t).to_string())
     showLine()
     sum = t['Gewinn [€]'].sum()
     print("Profit:" ,sum)
 #--------------------------------------------------------------------------------------------------
 def showRemainingStocks(p):
     showLine()
-    if globals.debug: print("Übrig gebliebene puts:\n", p.to_string(na_rep='-'))
+    if globals.debug: print("Übrig gebliebene puts:\n", makePositive(p).to_string(na_rep='-'))
     #print("\nAktienbestand Ende:\n", p[p["Menge"]>0].to_string(na_rep='-'))
-    print("\nAktienbestand Ende:\n", p)
+    print("\nAktienbestand Ende:\n", makePositive(p))
     print("-"*100)
 #--------------------------------------------------------------------------------------------------
 def showPerformance(table,name):

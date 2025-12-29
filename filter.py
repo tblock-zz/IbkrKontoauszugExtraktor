@@ -235,14 +235,15 @@ def boughtOptions(tables):
     return addEurValuesToOptions(tables, False)
 #--------------------------------------------------------------------------------------------------------------------
 def splitOptionSymbol(df):
-    if 'Symbol' not in df.columns:
+    acc = lng['Transaktionen']['symbol']
+    if acc not in df.columns:
         return df
     
     # Symbol format "TSLA 03OCT25 420 P"
     # Split by first space: Ticker vs rest
-    s = df['Symbol'].str.split(' ', n=1, expand=True)
+    s = df[acc].str.split(' ', n=1, expand=True)
     if s.shape[1] >= 2:
-        df['Symbol'] = s[0]
+        df[acc] = s[0]
         df.insert(1, 'Optionen', s[1])
     else:
         # Fallback if no space found

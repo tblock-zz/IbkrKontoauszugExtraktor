@@ -37,6 +37,14 @@ def exportToOds(filename: str, sheetsData: dict):
 
                 elif isinstance(item, pd.DataFrame):
                     if not item.empty:
+                        # Make positive (except 'Gewinn [€]')
+                        item_copy = item.copy()
+                        numeric_cols = item_copy.select_dtypes(include=['number']).columns
+                        for col in numeric_cols:
+                            if col != 'Gewinn [€]':
+                                item_copy[col] = item_copy[col].abs()
+                        item = item_copy
+
                         # Add headers
                         cols = list(item.columns)
                         sheetRows.append(cols)
