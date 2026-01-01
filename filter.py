@@ -38,7 +38,9 @@ def renameCols(table,cols):
 #--------------------------------------------------------------------------------------------------------------------
 def toNumber(table,cols):
     for i in cols:        
-        table[i] = table[i].astype(float)
+        if table[i].dtype == object:
+            table[i] = table[i].astype(str).str.replace(',', '', regex=False).str.strip()
+        table[i] = pd.to_numeric(table[i], errors='coerce')
     return table    
 #--------------------------------------------------------------------------------------------------------------------
 def getRowsOfColumnsContainingStr(table, colName:str, pattern:str):

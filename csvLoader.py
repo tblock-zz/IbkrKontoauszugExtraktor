@@ -75,14 +75,88 @@ class CSVTableProcessor:
             return self.tables.get(table_name)
 #--------------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------------
-def saveTransactionsDevisen(name, df):
-    df.to_csv(name, index=False)
+def saveState(filename, tables_dict):
+    """
+    Saves multiple DataFrames into a single CSV file with a format compatible with CSVTableProcessor.
+    Format: TableName, Header/Data, Col1, Col2, ...
+    """
+    output_rows = []
+    for name, df in tables_dict.items():
+        if df is None or df.empty:
+            continue
+        # Add Header row
+        header_row = [name, 'Header'] + df.columns.tolist()
+        output_rows.append(header_row)
+        # Add Data rows
+        for _, row in df.iterrows():
+            data_row = [name, 'Data'] + row.tolist()
+            output_rows.append(data_row)
+    
+    pd.DataFrame(output_rows).to_csv(filename, index=False, header=False)
+
 #--------------------------------------------------------------------------------------------------------------------
-def loadTransactionsDevisen(name):
-    return pd.read_csv(name)
+def loadState(filename):
+    """
+    Loads one or more tables from a CSV file. 
+    Supports both the dual-column prefix format and legacy single-table CSVs.
+    """
+    try:
+        # First try to read with the multi-table processor format
+        # We can use the existing CSVTableProcessor logic or a simplified version
+        data = pd.read_csv(filename, header=None, quotechar='"')
+        
+        # Check if it looks like our multi-table format (Column 1 contains 'Header' or 'Data')
+        if data.shape[1] >= 2 and data.iloc[:, 1].isin(['Header', 'Data']).any():
+            tables = {}
+            current_name = None
+            current_data = []
+            for _, row in data.iterrows():
+                table_name = row.iloc[0]
+                row_type = row.iloc[1]
+                if row_type == 'Header':
+                    if current_name and current_data:
+                        tables[current_name] = pd.DataFrame(current_data[1:], columns=current_data[0])
+                    current_name = table_name
+                    # Get all columns from index 2 onwards, but only up to the last non-NaN entry
+                    header_slice = row[2:]
+                    last_valid_idx = header_slice.last_valid_index()
+                    if last_valid_idx is not None:
+                        header_cols = header_slice.loc[:last_valid_idx].tolist()
+                    else:
+                        header_cols = []
+                    current_data = [header_cols]
+                elif row_type == 'Data':
+                    # Use the length of the header to slice the data
+                    current_data.append(row[2:2+len(current_data[0])].tolist())
+            
+            if current_name and current_data:
+                df = pd.DataFrame(current_data[1:], columns=current_data[0])
+                for col in df.columns:
+                    try:
+                        df[col] = pd.to_numeric(df[col])
+                    except:
+                        pass
+                tables[current_name] = df
+            return tables
+        else:
+            # Fallback for legacy single-table CSV (e.g. from stocksafter.csv)
+            # We assume it's 'Aktien Beginn' if it's the old format
+            df = pd.read_csv(filename)
+            for col in df.columns:
+                try:
+                    df[col] = pd.to_numeric(df[col])
+                except:
+                    pass
+            return {"Aktien Beginn": df}
+    except Exception as e:
+        print(f"Warnung: State-Datei konnte nicht geladen werden ({e})")
+        return {}
+
 #--------------------------------------------------------------------------------------------------------------------
 def saveRemainingStocks(name, df):
-    df.to_csv(name, index=False)
+    saveState(name, {"Aktien Ende": df})
+
 #--------------------------------------------------------------------------------------------------------------------
 def loadStockFromYearBefore(name):
-    return pd.read_csv(name)
+    tables = loadState(name)
+    return tables.get("Aktien Ende", tables.get("Aktien Beginn", pd.DataFrame()))

@@ -200,13 +200,14 @@ def showTaxRelevantTables(tables):
         "performance": tPerf
     }
 #--------------------------------------------------------------------------------------------------------------------
-def showCorrectedCalculation(tables,filename:str, exportFile:str=None):
-    stocksStart = filter.tableStocksStart(tables)
-    m = None
-    try:     
-        stocksStart = db.loadStockFromYearBefore(filename)
-    except:  
-        pass
+def showCorrectedCalculation(tables, stateFile:str, exportFile:str=None, stocksStart=None):
+    if stocksStart is None:
+        stocksStart = filter.tableStocksStart(tables)
+        try:     
+            stocksStart = db.loadStockFromYearBefore(stateFile)
+        except:  
+            pass
+    
     print("\n","!"*80,"\n  todo Kein Steuerdokument und vor Benutzung sorgfältig zu prüfen\n","!"*80)
     dp.showStartStocks(stocksStart.sort_values(by='Datum/Zeit')) # todo calculate EkEuro
     stocksBuy  = filter.tableStocksBuy(tables).sort_values(by='Datum/Zeit')
@@ -220,7 +221,18 @@ def showCorrectedCalculation(tables,filename:str, exportFile:str=None):
     dp.showStocksSellProfit(t)
     r = calculateRemaining(p,c)
     dp.showRemainingStocks(r)
-    db.saveRemainingStocks("stocksafter.csv", r)    
+    
+    # Save state: Remaining stocks and Devisen
+    tDev, _ = filter.tableTransactionsDevisen(tables)
+    if tDev is not None:
+        catCol = 'Vermögenswertkategorie'
+        if catCol in tDev.columns:
+            tDev = tDev[tDev[catCol] == 'Devisen']
+    
+    db.saveState("stocksafter.csv", {
+        "Aktien Ende": r,
+        "Devisen": tDev
+    })
     #------------------------------------------------------
     sold, bought, executedShorts,puts,calls = getExecutedShorts(tables)
     if False:
@@ -345,9 +357,6 @@ def parseArguments():
     parser.add_argument('--list', action='store_true', help='Ausgabe verfügbarer Tabellen')
     parser.add_argument('--align', type=str, help='Align csv separators')
     parser.add_argument('--csv', type=str, help='Dateiname für CSV Export der Ergebnisse')
-    parser.add_argument('--dev', type=str, help='Export Devisen Transaktionen in Datei')
-    parser.add_argument('--dev-in', type=str, help='Import Devisen Transaktionen aus Datei')
-    #return parser.parse_args([r'C:\Users\TomHome\IONOS HiDrive\users\tblock\Tom\prg\python\IbkrKontoauszugExtraktor\converted', '--tax'])
     return parser.parse_args()
 #--------------------------------------------------------------------------------------------------------------------
 def main():
@@ -361,19 +370,38 @@ def main():
         filename = args.align
     tables = db.CSVTableProcessor(filename, delimiter=args.delimiter, decimal=args.decimal, encoding=args.encoding).getTables()
     
-    # Merge imported Devisen transactions directly into the tables dictionary
-    if args.dev_in:
-        try:
-            importedDev = db.loadTransactionsDevisen(args.dev_in)
-            # Get the actual table name for Devisen from the filter function
-            _, devTableName = filter.tableTransactionsDevisen(tables) 
+    # Ensure native Devisen table is converted to numbers
+    _, devTableName = filter.tableTransactionsDevisen(tables)
+    if devTableName in tables:
+        devColsToConvert = ['Menge', 'T.-Kurs', 'Erlös', 'Provisionseink. EUR', 'MTM in EUR']
+        tables[devTableName] = filter.toNumber(tables[devTableName], [c for c in devColsToConvert if c in tables[devTableName].columns])
+    
+    # Load state from --new if provided
+    stocksStart = None
+    if args.new:
+        state = db.loadState(args.new)
+        # Try to find Devisen in state
+        importedDev = state.get("Devisen")
+        if importedDev is not None and not importedDev.empty:
+            # Ensure types for imported Devisen using the improved toNumber
+            devColsToConvert = ['Menge', 'T.-Kurs', 'Erlös', 'Provisionseink. EUR', 'MTM in EUR']
+            importedDev = filter.toNumber(importedDev, [c for c in devColsToConvert if c in importedDev.columns])
+            
             if devTableName in tables:
                 tables[devTableName] = filter.merge(importedDev, tables[devTableName])
             else:
                 tables[devTableName] = importedDev
-            print(f"Devisen Transaktionen aus {args.dev_in} importiert.")
-        except Exception as e:
-            print(f"Fehler beim Laden der Devisen Transaktionen: {e}")
+            print(f"Devisen Transaktionen aus {args.new} importiert.")
+        
+        stocksStart = state.get("Aktien Ende", state.get("Aktien Beginn"))
+        if stocksStart is not None and not stocksStart.empty:
+            acc = lng['Aktien']
+            colsToConvert = acc['toNumber']
+            # Filter colsToConvert to only include those present in stocksStart
+            colsToConvert = [c for c in colsToConvert if c in stocksStart.columns]
+            stocksStart = filter.toNumber(stocksStart, colsToConvert)
+            if 'EkEuro' in stocksStart.columns:
+                stocksStart['EkEuro'] = pd.to_numeric(stocksStart['EkEuro'], errors='coerce')
 
     if args.list:
         availableTables = list(tables.keys())
@@ -386,23 +414,8 @@ def main():
     if args.tax:
         tax_data = showTaxRelevantTables(tables)
     
-    if args.dev:
-        # Export only rows where 'Vermögenswertkategorie' is 'Devisen'
-        tDev, _ = filter.tableTransactionsDevisen(tables)
-        if tDev is not None:
-            catCol = 'Vermögenswertkategorie' # Assuming this is the correct column name for category
-            # Ensure the column exists before filtering
-            if catCol in tDev.columns:
-                tDevExport = tDev[tDev[catCol] == 'Devisen']
-                db.saveTransactionsDevisen(args.dev, tDevExport)
-                print(f"Devisen Transaktionen nach {args.dev} exportiert.")
-            else:
-                # Fallback if column not found for some reason, though it should be there
-                db.saveTransactionsDevisen(args.dev, tDev)
-                print(f"Devisen Transaktionen nach {args.dev} exportiert (ungefiltert, da Spalte '{catCol}' fehlt).")
-
     if args.new:
-        showCorrectedCalculation(tables,args.new, args.csv)
+        showCorrectedCalculation(tables, args.new, args.csv, stocksStart)
 #--------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__": 
     main()
