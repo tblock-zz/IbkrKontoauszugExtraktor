@@ -117,6 +117,11 @@ def showSoldStocks(t):
     s = lng["idSoldStocks"]
     print(s+"\n", makePositive(t))
 #--------------------------------------------------------------------------------------------------
+def showTransferedStocks(t):
+    showLine()
+    s = lng["idTransferedStocks"]
+    print(s+"\n", makePositive(t))
+#--------------------------------------------------------------------------------------------------
 def showStocksSellProfit(t):
     showLine()
     print("Berechnung Käufe - Verkäufe:\n" ,makePositive(t).to_string())

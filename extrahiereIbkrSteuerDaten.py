@@ -210,8 +210,10 @@ def showCorrectedCalculation(tables, stateFile:str, exportFile:str=None, stocksS
     
     print("\n","!"*80,"\n  todo Kein Steuerdokument und vor Benutzung sorgfältig zu prüfen\n","!"*80)
     dp.showStartStocks(stocksStart.sort_values(by='Datum/Zeit')) # todo calculate EkEuro
+    stocksTransfers = filter.tableTransfers(tables).sort_values(by='Datum/Zeit')
     stocksBuy  = filter.tableStocksBuy(tables).sort_values(by='Datum/Zeit')
     stocksSold = filter.tableStocksSell(tables).sort_values(by='Datum/Zeit')
+    dp.showTransferedStocks(stocksTransfers)
     dp.showBoughtStocks(stocksBuy)
     dp.showSoldStocks(stocksSold)
     #------------------------------------------------------

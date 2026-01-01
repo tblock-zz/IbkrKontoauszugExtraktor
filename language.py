@@ -6,6 +6,8 @@ tableNames = {
         "idBoughtOptionsSum" : "Summe Ausgaben Optionen:",
         "idBoughtStocks" : "Aktien gekauft:",
         "idSoldStocks" : "Aktien verkauft:",
+        "idTransferedStocks" : "davon Aktien übertragen:",
+        "idTime" : "Datum/Zeit",
         # short name, list name, used cols, to delete cols
         "Transaktionen" : {            
             'name'    : 'Transaktionen Aktien- und Indexoptionen', # tabellenname
@@ -71,6 +73,13 @@ tableNames = {
             'filters'      : ['Datum/Zeit', 'Beschreibung', 'Menge', 'Erlös in EUR'], #, 'Prov./Gebühr'],
             'toNumber'     : ['USD', 'EUR'],
             'time'         : 'Datum/Zeit',
+        },
+        "Transfers" : {
+            'name'    : 'Transfers', 
+            'renames'      : ['Datum', 'Datum/Zeit', 'Marktwert', 'Preis [USD]'],
+            'filters'      : ['Datum/Zeit', 'Symbol', 'Menge', 'Preis [USD]'],
+            'toNumber'     : ['Menge', 'Preis [USD]'],
+            'time'         : 'Datum/Zeit', 
         },
         "Devisen" : {            
             'name'    : 'Transaktionen Devisen',

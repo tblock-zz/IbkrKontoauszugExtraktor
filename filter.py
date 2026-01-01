@@ -44,7 +44,11 @@ def toNumber(table,cols):
     return table    
 #--------------------------------------------------------------------------------------------------------------------
 def getRowsOfColumnsContainingStr(table, colName:str, pattern:str):
+    try:
         return table[table[colName].str.contains(pattern, na=False)]
+    except:
+        print(f"table={table}")
+        return None 
 #--------------------------------------------------------------------------------------------------------------------
 def getRowsOfColumnsMatchingFormula(table, colName:str, pattern:str):
     if globals.debug:    print(f"Filter {colName} mit {pattern}")
@@ -178,6 +182,20 @@ def tablePerformance(tables):
     for i, item in enumerate(r):
         c.iat[i] = item
     return t,name
+#--------------------------------------------------------------------------------------------------------------------
+def tableTransfers(tables):
+    acc = lng['Transfers']
+    name, f, r, n, ti = acc['name'], acc['filters'], acc['renames'], acc['toNumber'], acc['time']
+    t = tables.get(name)
+    t = renameCols(t,r)
+    # only use columns from filter f
+    t = t[f]
+    # wandle nach datetime und lösche Zeilen ohne
+    t[ti] = pd.to_datetime(t[ti], errors='coerce')
+    t = t.dropna(subset=[ti])
+    # convert Menge und Preis nach int und float
+    t = toNumber(t,n) 
+    return t
 #--------------------------------------------------------------------------------------------------------------------
 def tableTransactionsOptions(tables):
     return tables.get(lng['Transaktionen']['name'])
