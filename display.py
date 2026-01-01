@@ -144,6 +144,10 @@ def showDividenden(table,name):
     showTableFiltered(table,name,"Währung","Gesamtwert in EUR")
     print("-"*100)
 #--------------------------------------------------------------------------------------------------
+def showTransactionsDevisen(table,name):
+    showTableFiltered(table,name,"Vermögenswertkategorie","Devisen")
+    print("-"*100)
+#--------------------------------------------------------------------------------------------------
 def showQuellensteuer(table,name):
     showTableFiltered(table,name,"Währung","Gesamt Quellensteuer in EUR")
     print("-"*100)

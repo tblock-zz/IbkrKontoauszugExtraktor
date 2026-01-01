@@ -72,6 +72,21 @@ tableNames = {
             'toNumber'     : ['USD', 'EUR'],
             'time'         : 'Datum/Zeit',
         },
+        "Devisen" : {            
+            'name'    : 'Transaktionen Devisen',
+            'usedCols': [                
+                'Vermögenswertkategorie',
+                'Währung',
+                'Symbol',
+                'Datum/Zeit',
+                'Menge',
+                'T.-Kurs',
+                'Erlös',
+                'Provisionseink. EUR',
+                'MTM in EUR'
+            ],
+            'delCols' :  [],
+        },
         'Zinsen' : {
             'name'    : 'Zinsen',
             'usedCols': ['Währung','Gesamt*'],

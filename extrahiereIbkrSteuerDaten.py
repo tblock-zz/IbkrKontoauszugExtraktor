@@ -190,6 +190,9 @@ def showTaxRelevantTables(tables):
     tDiv, nameDiv = filter.tableDividenden(tables)
     dp.showDividenden(tDiv, nameDiv)
     
+    tDev, nameDev = filter.tableTransactionsDevisen(tables)
+    dp.showTransactionsDevisen(tDev, nameDev)
+    
     return {
         "zinsen": tZinsen,
         "quellensteuer": tQuellen,

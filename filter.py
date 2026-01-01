@@ -83,6 +83,16 @@ def tableTransactions(tables):
 def tableZinsen(tables):
     return handleTable(tables, 'Zinsen', 4)
 #--------------------------------------------------------------------------------------------------------------------
+def tableTransactionsDevisen(tables):
+    acc = lng['Devisen']
+    cName, colsUsed = acc['name'], acc['usedCols']
+    try:
+        t = tables.get(cName)[colsUsed]
+    except Exception as e:
+        print(f"Error: {e}")
+        t = None
+    return t, cName
+#--------------------------------------------------------------------------------------------------------------------
 def tableDividenden(tables):
     return handleTable(tables, 'Dividenden', 5)
 #--------------------------------------------------------------------------------------------------------------------
