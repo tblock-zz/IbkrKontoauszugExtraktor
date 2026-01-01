@@ -345,6 +345,8 @@ def parseArguments():
     parser.add_argument('--list', action='store_true', help='Ausgabe verfügbarer Tabellen')
     parser.add_argument('--align', type=str, help='Align csv separators')
     parser.add_argument('--csv', type=str, help='Dateiname für CSV Export der Ergebnisse')
+    parser.add_argument('--dev', type=str, help='Export Devisen Transaktionen in Datei')
+    parser.add_argument('--dev-in', type=str, help='Import Devisen Transaktionen aus Datei')
     #return parser.parse_args([r'C:\Users\TomHome\IONOS HiDrive\users\tblock\Tom\prg\python\IbkrKontoauszugExtraktor\converted', '--tax'])
     return parser.parse_args()
 #--------------------------------------------------------------------------------------------------------------------
@@ -358,28 +360,49 @@ def main():
         al.alignSeparators(args.file_path, args.align, args.encoding)
         filename = args.align
     tables = db.CSVTableProcessor(filename, delimiter=args.delimiter, decimal=args.decimal, encoding=args.encoding).getTables()
-    #filter.setTables(tables)
+    
+    # Merge imported Devisen transactions directly into the tables dictionary
+    if args.dev_in:
+        try:
+            importedDev = db.loadTransactionsDevisen(args.dev_in)
+            # Get the actual table name for Devisen from the filter function
+            _, devTableName = filter.tableTransactionsDevisen(tables) 
+            if devTableName in tables:
+                tables[devTableName] = filter.merge(importedDev, tables[devTableName])
+            else:
+                tables[devTableName] = importedDev
+            print(f"Devisen Transaktionen aus {args.dev_in} importiert.")
+        except Exception as e:
+            print(f"Fehler beim Laden der Devisen Transaktionen: {e}")
+
     if args.list:
         availableTables = list(tables.keys())
         print("Verfügbare Tabellen:")
         for idx, table in enumerate(availableTables, start=1): print(f"  {idx}: '{table}'")
     if args.table:
         dp.showSpecificTable(tables,args.table,args.columns)
+    
     tax_data = {}
     if args.tax:
         tax_data = showTaxRelevantTables(tables)
+    
+    if args.dev:
+        # Export only rows where 'Vermögenswertkategorie' is 'Devisen'
+        tDev, _ = filter.tableTransactionsDevisen(tables)
+        if tDev is not None:
+            catCol = 'Vermögenswertkategorie' # Assuming this is the correct column name for category
+            # Ensure the column exists before filtering
+            if catCol in tDev.columns:
+                tDevExport = tDev[tDev[catCol] == 'Devisen']
+                db.saveTransactionsDevisen(args.dev, tDevExport)
+                print(f"Devisen Transaktionen nach {args.dev} exportiert.")
+            else:
+                # Fallback if column not found for some reason, though it should be there
+                db.saveTransactionsDevisen(args.dev, tDev)
+                print(f"Devisen Transaktionen nach {args.dev} exportiert (ungefiltert, da Spalte '{catCol}' fehlt).")
+
     if args.new:
         showCorrectedCalculation(tables,args.new, args.csv)
-
-        # Re-gather data for ODS if needed, this part inside showCorrectedCalculation handles the export.
-        # However, showCorrectedCalculation is currently handling the export logic.
-        # We need to make sure showCorrectedCalculation has access to the 'tax_data' from showTaxRelevantTables if we want to include it in the report.
-        # But 'showCorrectedCalculation' is called AFTER 'showTaxRelevantTables'.
-        # Actually, let's pass tax_data to showCorrectedCalculation if available, or just re-fetch it inside if needed. 
-        # Simpler: Modify showCorrectedCalculation to call showTaxRelevantTables internally or extract data there?
-        # Argument 'args.tax' controls if we show it on screen.
-        # But for export we definitely want it.
-        pass
 #--------------------------------------------------------------------------------------------------------------------
 if __name__ == "__main__": 
     main()
