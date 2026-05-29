@@ -3,7 +3,7 @@ todos
    move prints to display.py
 '''
 import pandas as pd
-import argparse
+import argparse, sys
 import globals
 
 import alignCsv as al
@@ -160,21 +160,27 @@ def calculateProfit(p: pd.DataFrame, c: pd.DataFrame) -> pd.DataFrame:
 def getExecutedShorts(tables):
     cMenge = lng['Aktien']['menge']
     soldOpts=filter.soldCallsPuts(tables)
-    soldOpts[cMenge] = soldOpts[cMenge].astype(float)*100
-    sC=filter.getSumOptions(soldOpts)
-    dp.showSoldShorts(soldOpts,sC)
+    sC = 0
+    if soldOpts is not None:
+        soldOpts[cMenge] = soldOpts[cMenge].astype(float)*100
+        sC=filter.getSumOptions(soldOpts)
+        dp.showSoldShorts(soldOpts,sC)
     
     boughtOpts=filter.boughtCallsPuts(tables)
-    boughtOpts[cMenge] = boughtOpts[cMenge].astype(float)*100
-    sP=filter.getSumOptions(boughtOpts)
-    dp.showBoughtShorts(boughtOpts,sP)
+    sP = 0
+    if boughtOpts is not None:
+        boughtOpts[cMenge] = boughtOpts[cMenge].astype(float)*100
+        sP=filter.getSumOptions(boughtOpts)
+        dp.showBoughtShorts(boughtOpts,sP)
     
     dp.showLine()
     print(f"Gewinn aus Optionsgeschäften: {sC} + {sP} = {sC + sP}")
     dp.showLine()
     executedShorts = filter.executedOptions(tables)
-    p = filter.executedPutsCalls(tables,executedShorts,'filterExePuts')
-    c = filter.executedPutsCalls(tables,executedShorts,'filterExeCalls')
+    p = c = None
+    if executedShorts is not None:
+        p = filter.executedPutsCalls(tables,executedShorts,'filterExePuts')
+        c = filter.executedPutsCalls(tables,executedShorts,'filterExeCalls')
     return soldOpts, boughtOpts, executedShorts, p,c
 #--------------------------------------------------------------------------------------------------------------------
 def showTaxRelevantTables(tables):
@@ -210,10 +216,13 @@ def showCorrectedCalculation(tables, stateFile:str, exportFile:str=None, stocksS
     
     print("\n","!"*80,"\n  todo Kein Steuerdokument und vor Benutzung sorgfältig zu prüfen\n","!"*80)
     dp.showStartStocks(stocksStart.sort_values(by='Datum/Zeit')) # todo calculate EkEuro
-    stocksTransfers = filter.tableTransfers(tables).sort_values(by='Datum/Zeit')
+    t = filter.tableTransfers(tables)
+    stocksTransfers = None
+    if t is not None:
+        stocksTransfers = t.sort_values(by='Datum/Zeit')
+        dp.showTransferedStocks(stocksTransfers)
     stocksBuy  = filter.tableStocksBuy(tables).sort_values(by='Datum/Zeit')
     stocksSold = filter.tableStocksSell(tables).sort_values(by='Datum/Zeit')
-    dp.showTransferedStocks(stocksTransfers)
     dp.showBoughtStocks(stocksBuy)
     dp.showSoldStocks(stocksSold)
     #------------------------------------------------------
@@ -362,6 +371,20 @@ def parseArguments():
     return parser.parse_args()
 #--------------------------------------------------------------------------------------------------------------------
 def main():
+    # insert for debugging following as arguments like in cli
+    # python extrahiereIbkrSteuerDaten.py /home/tom/data/2022.captrader.U10740602.csv --align converted --tax --new ./data/2022.captrader.U10740602_start.csv
+    if len(sys.argv) == 1:
+      sys.argv = [
+        "extrahiereIbkrSteuerDaten.py",
+        #"/home/tom/projects/prg/python/IbkrKontoauszugExtraktor/data/2022.ibkr.U10740602.csv",
+        "/home/tom/projects/prg/python/IbkrKontoauszugExtraktor/data/2025.captrader.U12614984.csv",
+        "--align", "converted",
+        "--tax",
+        #"--new", "/home/tom/projects/prg/python/IbkrKontoauszugExtraktor/data/2022.ibkr.U10740602_start.csv"
+        "--new", "/home/tom/projects/prg/python/IbkrKontoauszugExtraktor/data/2025.captrader.U12614984_start.csv",
+
+      ]
+
     args = parseArguments()
     filename = args.file_path
 

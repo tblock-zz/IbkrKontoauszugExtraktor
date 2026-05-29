@@ -108,7 +108,10 @@ def tableQuellensteuer(tables):
 def tableForex(tables):
     acc = lng['Forex']
     name, f, r, n = acc['name'], acc['filters'], acc['renames'], acc['toNumber']
-    t = tables.get(name).copy()[f]
+    t = tables.get(name)
+    if t is None:
+        return None
+    t = t.copy()[f]
     t = renameCols(t,r)
     # wandle nach datetime und lösche Zeilen ohne
     c = lng['Forex']['time']
@@ -187,6 +190,8 @@ def tableTransfers(tables):
     acc = lng['Transfers']
     name, f, r, n, ti = acc['name'], acc['filters'], acc['renames'], acc['toNumber'], acc['time']
     t = tables.get(name)
+    if t is None:
+        return None
     t = renameCols(t,r)
     # only use columns from filter f
     t = t[f]
@@ -243,7 +248,11 @@ def addEurValuesToOptions(tables,usePositive:bool):
     f,e,g,r,n = acc['filterSoldOptions'], acc['erlös'], acc['gebühr'], acc['renames'], acc['toNumber']
     eu = "USDEUR"
     t = tableTransactionsOptions(tables)
+    if t is None:
+        return None
     t = renameCols(t,r)
+    if t is None:
+        return None
     t = getRowsOfColumnsContainingStr(t, f["col"], f["val"]).copy()
     for i in n:       t[i] = pd.to_numeric(t[i])
     if usePositive:     t = t[t[e] > 0] 
